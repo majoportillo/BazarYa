@@ -19,7 +19,7 @@ class Usuario(Base):
     password_hash = Column(String(255), nullable=False)
     telefono = Column(String(20), nullable=False)
     fotografia_url = Column(String(255), nullable=True)
-    rol = Column(Enum(RolUsuario), nullable=False, default=RolUsuario.COMPRADOR_VENDEDOR, index=True)
+    rol = Column(Enum(RolUsuario, name="rol_usuario"), nullable=False, default=RolUsuario.COMPRADOR_VENDEDOR, index=True)
     activo = Column(Boolean, nullable=False, default=True)
     fecha_creacion = Column(DateTime(timezone=True), server_default=func.now())
     fecha_actualizacion = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
