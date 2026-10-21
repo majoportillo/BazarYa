@@ -21,6 +21,11 @@ Este archivo debe estar en el mismo directorio que el archivo compose, y ustedes
 
 si ya poseen la herramienta instalada de docker compose en su sistema operativo ejecutar el siguiente comando.
 
+Para que la información sea persistente en el mismo directorio donde se guarde el archivo compose,
+crear un directorio llamado  data, el cual será importado como volumen dentro del compose y se usará para guardar
+la inforamción generado por la base de datos, esto permitirá que aunque el contenedor sea eliminado por mantenimiento
+la información no se pierda.
+
 ```bash
     docker compose -f bazarya-cp.yml up -d
 ```
@@ -29,5 +34,9 @@ Si se necesita eliminar el contenedor se debe usar el comando anterior pero con 
 ```bash
     docker compose -f bazarya-cp.yml down -v
 ```
-La opción -d de este comando solo es para que sea detallado de lo que está haciendo, es opcional 
+La opción -v de este comando solo es para que sea detallado de lo que está haciendo, es opcional
 
+## Inicialización de la base de datos
+ Por buena práctica para la creación de los scripts DDL deben ser manualmente y no dejar que se ejecuten de forma automática
+ esto para evitar que cuando ya se tenga información creada esta se pierra volviendo a crearse los archivos o que fallen 
+ por que algo ya existe.
