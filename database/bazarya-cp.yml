@@ -1,5 +1,5 @@
 services:
-  gembak-db:
+  bazarya-db:
     image: postgres:16.8-alpine3.20
     container_name: bazarya
     environment:
@@ -7,8 +7,6 @@ services:
       POSTGRES_PASSWORD: ${PASSWORD_DB}
       POSTGRES_DB: bazar
     ports:
-      - '5432:5432'
+      - '54322:5432'
     volumes:
-      - pgdata:/var/lib/postgresql/data
-volumes:
-  pgdata:
+      - "./data:/var/lib/postgresql/data"
