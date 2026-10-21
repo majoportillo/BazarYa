@@ -4,7 +4,9 @@ Para la creación del contenedor de base de datos para realizar sus pruebas loca
 ya sea docker o podman según sus sistema operativo, utilizando la herrameinta compose
 según su herramienta.
 
-El archivo **bazarya-cp.yml** contiene la configuración necesaria.
+El archivo **bazarya-cp.yml** contiene la configuración necesaria, se cambia el puerto externo para que no colisione 
+si se tiene una instancia de postgresql ya instalada, si es necesario se puede modificar localmente a un puerto libre si
+este aún colisiona con otro proceso.
 
 ### Ejecucución desde una terminal/Powershell
 
