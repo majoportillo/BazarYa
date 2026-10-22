@@ -16,9 +16,31 @@ export default function RegisterPage() {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log('Datos listos para enviar:', formData);
+        
+        try {
+            // Nota: El puerto 8000 y la ruta exacta dependerán de cómo lo configure el Backend
+            const response = await fetch('http://localhost:8000/api/usuarios/registro', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            });
+
+            if (response.ok) {
+                alert('¡Registro completado con éxito!');
+                // Limpiar el formulario tras el éxito
+                setFormData({ nombre: '', email: '', password: '' });
+            } else {
+                const errorData = await response.json();
+                alert(`Error al registrar: ${errorData.message || 'Datos inválidos'}`);
+            }
+        } catch (error) {
+            console.error('Error de red:', error);
+            alert('Error de conexión con el servidor. Verifica que el API backend esté encendido.');
+        }
     };
 
     return (
@@ -32,7 +54,7 @@ export default function RegisterPage() {
                             name="nombre" 
                             value={formData.nombre} 
                             onChange={handleChange} 
-                            placeholder="Ej. Ergil Cárdenas" 
+                            placeholder="Ej. Juan López" 
                             required 
                         />
                     </div>
