@@ -49,7 +49,7 @@ class Producto(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     usuario_id = Column(UUID(as_uuid=True), ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=False) # AC-09
-    categoria_id = Column(Integer, nullable=False, index=True) # AC-05
+    categoria_id = Column(Integer, ForeignKey("categorias.id", ondelete="RESTRICT"), nullable=False, index=True) # AC-05
     nombre = Column(String(150), nullable=False) # AC-02
     descripcion = Column(Text, nullable=False) # AC-03
     precio = Column(Numeric(10, 2), nullable=False) # AC-04
@@ -61,6 +61,7 @@ class Producto(Base):
     # Relaciones
     usuario = relationship("Usuario", back_populates="productos")
     imagenes = relationship("ImagenProducto", back_populates="producto", cascade="all, delete-orphan")
+    categoria = relationship("Categoria", back_populates="productos")
 
 
 # ==========================================
@@ -75,3 +76,13 @@ class ImagenProducto(Base):
     es_principal = Column(Boolean, nullable=False, default=False)
 
     producto = relationship("Producto", back_populates="imagenes")
+
+class Categoria(Base):
+    __tablename__ = "categorias"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String(100), nullable=False, unique=True, index=True)
+    descripcion = Column(Text, nullable=True)
+    activo = Column(Boolean, nullable=False, default=True)
+    fecha_creacion = Column(DateTime(timezone=True), server_default=func.now())
+    productos = relationship("Producto", back_populates="categoria")

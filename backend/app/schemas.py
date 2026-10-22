@@ -82,7 +82,7 @@ class ProductoCreate(BaseModel):
 class ProductoResponse(BaseModel):
     id: int
     usuario_id: UUID  # AC-09: Asociado al creador
-    categoria_id: int
+    categoria: CategoriaResponse
     nombre: str
     descripcion: str
     precio: float
@@ -91,6 +91,19 @@ class ProductoResponse(BaseModel):
     fecha_creacion: datetime
     fecha_actualizacion: datetime
     imagenes: List[ImagenProductoResponse]
+
+    class Config:
+        from_attributes = True
+
+# ==========================================
+# ESQUEMAS DE CATEGORÍAS
+# ==========================================
+
+class CategoriaResponse(BaseModel):
+    id: int
+    nombre: str
+    descripcion: Optional[str] = None
+    activo: bool
 
     class Config:
         from_attributes = True
