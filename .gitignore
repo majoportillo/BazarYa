@@ -20,3 +20,4 @@ build/
 
 # Archivos de la base de datos local
 database/data/
+*.pid
