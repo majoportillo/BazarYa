@@ -1,10 +1,17 @@
-from pydantic import BaseModel, model_validator, EmailStr, Field, field_validator
+import html
+import re
+from datetime import datetime
+from decimal import Decimal
 from typing import List, Optional
 from uuid import UUID
-from datetime import datetime
+
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 from .models import RolUsuario, EstadoProducto
-import html
-from decimal import Decimal
+
+# Expresión regular para validar formato Data URL Base64 de imagen
+BASE64_IMAGE_REGEX = re.compile(
+    r"^data:image/(png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/=]+$"
+)
 
 # ==========================================
 # ESQUEMAS DE CATEGORÍAS
@@ -61,14 +68,24 @@ class UsuarioResponse(BaseModel):
 
 # Sub-esquema para imágenes del producto (AC-06)
 class ImagenProductoCreate(BaseModel):
-    url_imagen: str = Field(..., min_length=5, description="URL o cadena Base64 de la imagen")
+    url_imagen: str = Field(..., description="URL o cadena Base64 de la imagen")
     es_principal: bool = False
 
     @field_validator("url_imagen", mode="before")
     @classmethod
-    def sanear_url(cls, v: str) -> str:
+    def validar_y_sanear_imagen(cls, v: str) -> str:
         if isinstance(v, str):
-            return v.strip()
+            v_clean = v.strip()
+            if not v_clean:
+                raise ValueError("La representación de la imagen no puede estar vacía.")
+            
+            # Si inicia con data:image, verificamos que cumpla el formato Base64 de imagen válido
+            if v_clean.startswith("data:image"):
+                if not BASE64_IMAGE_REGEX.match(v_clean):
+                    raise ValueError(
+                        "Formato Base64 inválido. Debe ser una cadena válida (ej. 'data:image/png;base64,...')."
+                    )
+            return v_clean
         return v
 
 class ImagenProductoResponse(BaseModel):
@@ -84,7 +101,7 @@ class ImagenProductoResponse(BaseModel):
 class ProductoCreate(BaseModel):
     nombre: str = Field(..., min_length=3, max_length=150, description="Título del producto")
     descripcion: str = Field(..., min_length=10, description="Descripción detallada")
-    precio: float = Field(..., gt=0, description="Precio positivo mayor a cero")
+    precio: Decimal = Field(..., gt=0, decimal_places=2, description="Precio positivo mayor a cero")
     stock: int = Field(1, ge=1, description="Cantidad inicial disponible")
     categoria_id: int = Field(..., gt=0, description="ID de categoría válido")
     imagenes: List[ImagenProductoCreate] = Field(..., min_items=1, max_items=5, description="Requiere al menos una imagen, máximo 5")
@@ -128,3 +145,4 @@ class ProductoResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
