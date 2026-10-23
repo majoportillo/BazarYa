@@ -93,3 +93,67 @@ def obtener_productos_por_usuario(db: Session, usuario_id: UUID) -> List[Product
         .order_by(Producto.fecha_creacion.desc())
         .all()
     )
+
+# ==========================================
+# ACTUALIZACIÓN / EDICIÓN DE PUBLICACIÓN (BYA-76)
+# ==========================================
+
+def actualizar_publicacion(
+    db: Session, 
+    producto_id: int, 
+    producto_update: ProductoUpdate, 
+    usuario_id: UUID
+) -> Producto:
+    """
+    AC-02: Permite editar una publicación existente.
+    AC-03: Verifica que la publicación pertenezca al usuario solicitante.
+    AC-07: Bloquea cualquier modificación directa al estado administrativo.
+    """
+    # 1. Obtener el producto de la base de datos
+    producto = get_producto_by_id(db, producto_id)
+    if not producto:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"La publicación con ID {producto_id} no fue encontrada."
+        )
+
+    # 2. Validación estricta de propiedad (AC-03)
+    if producto.usuario_id != usuario_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para modificar una publicación que no te pertenece."
+        )
+
+    # 3. Extraer únicamente los campos enviados para actualización parcial
+    datos_actualizacion = producto_update.model_dump(exclude_unset=True)
+
+    # 4. Validar cambio de categoría si se incluyó en el request
+    if "categoria_id" in datos_actualizacion:
+        categoria = get_categoria_by_id(db, datos_actualizacion["categoria_id"])
+        if not categoria:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"La categoría con ID {datos_actualizacion['categoria_id']} no existe o se encuentra inactiva."
+            )
+
+    # 5. Manejo de actualización de imágenes si fueron provistas
+    nuevas_imagenes = datos_actualizacion.pop("imagenes", None)
+    if nuevas_imagenes is not None:
+        # Reemplazar imágenes anteriores asociadas al producto
+        db.query(ImagenProducto).filter(ImagenProducto.producto_id == producto.id).delete()
+        for img_data in nuevas_imagenes:
+            nueva_img = ImagenProducto(
+                producto_id=producto.id,
+                url_imagen=img_data["url_imagen"],
+                es_principal=img_data.get("es_principal", False)
+            )
+            db.add(nueva_img)
+
+    # 6. Actualizar campos escalares permitidos (excluyendo el estado por AC-07)
+    for campo, valor in datos_actualizacion.items():
+        if campo != "estado": # AC-07
+            setattr(producto, campo, valor)
+
+    db.commit()
+    db.refresh(producto)
+    return producto

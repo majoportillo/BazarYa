@@ -61,6 +61,46 @@ class TestEsquemaProducto(unittest.TestCase):
         self.assertIn("&lt;script&gt;", producto.nombre)
         self.assertEqual(producto.nombre.startswith(" "), False)
 
+    # BYA-76: AC-02 / AC-03 - Edición de Publicaciones
+    def test_ac02_ac03_edicion_publicacion_propiedad(self):
+        # 1. Simular esquema de actualización válido
+        update_data = {
+            "nombre": "Laptop Gamer Usada Editada",
+            "precio": Decimal("750.00")
+        }
+        esquema_update = ProductoUpdate(**update_data)
+        self.assertEqual(esquema_update.nombre, "Laptop Gamer Usada Editada")
+        self.assertEqual(esquema_update.precio, Decimal("750.00"))
+
+    def test_ac03_edicion_usuario_no_propietario_error(self):
+        # Verifica la regla de autorización a nivel de servicio CRUD
+        usuario_dueno = uuid.uuid4()
+        usuario_intruso = uuid.uuid4()
+        
+        # Inserción dummy de producto en sesión de prueba
+        producto = Producto(
+            usuario_id=usuario_dueno,
+            categoria_id=1,
+            nombre="Producto Original",
+            descripcion="Descripción del producto original",
+            precio=100.00,
+            stock=1,
+            estado=EstadoProducto.PENDING
+        )
+        self.db.add(producto)
+        self.db.commit()
+
+        # Intentar editar con usuario distinto genera un error 403 HTTP
+        update_schema = ProductoUpdate(nombre="Hackeo de Nombre")
+        with self.assertRaises(HTTPException) as context:
+            actualizar_publicacion(
+                db=self.db,
+                producto_id=producto.id,
+                producto_update=update_schema,
+                usuario_id=usuario_intruso
+            )
+        self.assertEqual(context.exception.status_code, status.HTTP_403_FORBIDDEN)
+        
     # AC-04: Validación de Precio
     def test_ac04_precio_invalido(self):
         for precio_invalido in [0, -10.50, -1]:
