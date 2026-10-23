@@ -17,3 +17,7 @@ build/
 # Configuración de editores
 .vscode/
 .idea/
+
+# Archivos de la base de datos local
+database/data/
+*.pid
