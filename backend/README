@@ -24,9 +24,10 @@ El backend de **BazarYa** está desarrollado en Python utilizando **FastAPI** y 
 ### Ejecución y Prueba Local
 
 1. **Levantar la Base de Datos con Docker:**
+   Asegúrate de contar con el archivo `.env` en la raíz del proyecto con las credenciales correspondientes:
    ```bash
-   docker compose -f database/bazarya-cp.yml up -d
-
+   docker compose --env-file .env -f database/bazarya-cp.yml up -d
+```
 
 2. **Instalar Dependencias de Python:**
    ```bash
@@ -36,7 +37,7 @@ El backend de **BazarYa** está desarrollado en Python utilizando **FastAPI** y 
 
 3. **Iniciar Servidor de Desarrollo**
     ```bash
-    uvicorn app.main:app --reload
+   $env:PYTHONPATH="."; py -m uvicorn app.main:app --reload
     ```
 
 4. **Documentacion Interactiva (Swagger /OpenAPI)**
