@@ -148,3 +148,21 @@ class ProductoResponse(BaseModel):
 
     class Config:
         from_attributes = True
+# ==========================================
+# NUEVOS ESQUEMAS PARA PERFILES (BYA-57 y BYA-58)
+# ==========================================
+
+class UsuarioUpdate(BaseModel):
+    nombre_completo: Optional[str] = Field(None, min_length=2, max_length=100)
+    telefono: Optional[str] = Field(None, min_length=8, max_length=20)
+    fotografia_url: Optional[str] = None
+
+class UsuarioPublicResponse(BaseModel):
+    id: UUID
+    nombre_completo: str
+    fotografia_url: Optional[str]
+    rol: RolUsuario
+    fecha_creacion: datetime
+
+    class Config:
+        from_attributes = True
