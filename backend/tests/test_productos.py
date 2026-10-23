@@ -1,0 +1,92 @@
+# Pruebas para la creación de publicaciones
+# Tarea: Integración del módulo Crear Publicación (BazarYa)
+# Criterios de Aceptación:
+#   AC-02: Nombre requerido y limpio (min 3)
+#   AC-03: Descripción requerida y limpia (min 10)
+#   AC-04: Precio estrictamente mayor a 0 (Decimal)
+#   AC-05: Validación de categoría existente y activa
+#   AC-06: Mínimo 1 imagen y máximo 5; sanitización Base64
+#   AC-07: Estado inicial obligatorio en PENDING
+#   AC-10: Sanitización de textos contra XSS
+
+import unittest
+from decimal import Decimal
+
+try:
+    from pydantic import ValidationError
+    from app.schemas import ProductoCreate, ImagenProductoCreate
+    error_schemas = None
+except Exception as e:
+    error_schemas = e
+
+
+def datos_producto_validos(**cambios):
+    datos = {
+        "nombre": "Cámara Fotográfica Vintage",
+        "descripcion": "Cámara fotográfica analógica en excelente estado de conservación.",
+        "precio": Decimal("150.00"),
+        "stock": 2,
+        "categoria_id": 1,
+        "imagenes": [
+            {
+                "url_imagen": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+                "es_principal": True
+            }
+        ]
+    }
+    datos.update(cambios)
+    return datos
+
+
+class TestEsquemaProducto(unittest.TestCase):
+
+    def setUp(self):
+        if error_schemas:
+            self.fail("No se pudieron importar los schemas de Producto: " + repr(error_schemas))
+
+    # AC-02 y AC-10: Saneamiento XSS y validación de espacios
+    def test_ac02_ac10_sanitizacion_xss_y_espacios(self):
+        datos = datos_producto_validos(
+            nombre="  <script>alert('xss')</script> Laptop  ",
+            descripcion="  <g>Descripción detallada del producto</g>  "
+        )
+        producto = ProductoCreate(**datos)
+        # Verifica que se eliminaron espacios y se escaparon los tags HTML
+        self.assertNotIn("<script>", producto.nombre)
+        self.assertIn("&lt;script&gt;", producto.nombre)
+        self.assertEqual(producto.nombre.startswith(" "), False)
+
+    # AC-04: Validación de Precio
+    def test_ac04_precio_invalido(self):
+        for precio_invalido in [0, -10.50, -1]:
+            with self.assertRaises(ValidationError, msg=f"Aceptó precio inválido: {precio_invalido}"):
+                ProductoCreate(**datos_producto_validos(precio=precio_invalido))
+
+    # AC-06: Asignación automática de imagen principal si ninguna viene marcada
+    def test_ac06_imagen_principal_automatica(self):
+        datos = datos_producto_validos(imagenes=[
+            {"url_imagen": "https://imagen.com/1.jpg", "es_principal": False}
+        ])
+        producto = ProductoCreate(**datos)
+        self.assertTrue(producto.imagenes[0].es_principal)
+
+    # AC-06: Error si más de una imagen es marcada como principal
+    def test_ac06_multiple_imagen_principal_error(self):
+        datos = datos_producto_validos(imagenes=[
+            {"url_imagen": "https://imagen.com/1.jpg", "es_principal": True},
+            {"url_imagen": "https://imagen.com/2.jpg", "es_principal": True}
+        ])
+        with self.assertRaises(ValidationError):
+            ProductoCreate(**datos)
+
+    # AC-06: Validar formato Base64 malformado
+    def test_ac06_base64_invalido(self):
+        datos = datos_producto_validos(imagenes=[
+            {"url_imagen": "data:image/png;base64,FORMATO_CORRUPTO_O_INVALIDO_$$$", "es_principal": True}
+        ])
+        with self.assertRaises(ValidationError):
+            ProductoCreate(**datos)
+
+
+if __name__ == "__main__":
+    unittest.main()

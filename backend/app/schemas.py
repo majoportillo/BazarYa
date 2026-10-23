@@ -36,6 +36,16 @@ class UsuarioCreate(BaseModel):
     telefono: str = Field(..., min_length=8, max_length=20)
     fotografia_url: Optional[str] = None
 
+    @field_validator("nombre_completo", "telefono", mode="before")
+    @classmethod
+    def strip_and_validate_user_strings(cls, v: str) -> str:
+        if isinstance(v, str):
+            v_clean = v.strip()
+            if not v_clean:
+                raise ValueError("El campo no puede estar vacío ni contener solo espacios")
+            return v_clean
+        return v
+        
     @field_validator("email", mode="before")
     @classmethod
     def email_to_lower(cls, v: str) -> str:
