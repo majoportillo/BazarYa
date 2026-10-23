@@ -43,7 +43,12 @@ class TestEsquemaProducto(unittest.TestCase):
     def setUp(self):
         if error_schemas:
             self.fail("No se pudieron importar los schemas de Producto: " + repr(error_schemas))
-
+    # BYA-76: AC-01 - Consultar publicaciones propias
+    def test_ac01_consultar_mis_publicaciones_vacio(self):
+        # Verifica que la función del CRUD filtre correctamente por el ID del usuario
+        usuario_id_dummy = uuid.uuid4()
+        productos = obtener_productos_por_usuario(db=self.db, usuario_id=usuario_id_dummy)
+        self.assertEqual(len(productos), 0)
     # AC-02 y AC-10: Saneamiento XSS y validación de espacios
     def test_ac02_ac10_sanitizacion_xss_y_espacios(self):
         datos = datos_producto_validos(

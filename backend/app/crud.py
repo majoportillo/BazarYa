@@ -82,3 +82,14 @@ def get_productos_publicos(db: Session, skip: int = 0, limit: int = 10) -> List[
 def get_producto_by_id(db: Session, producto_id: int) -> Optional[Producto]:
     """Obtiene el detalle de un producto por su ID."""
     return db.query(Producto).filter(Producto.id == producto_id).first()
+
+def obtener_productos_por_usuario(db: Session, usuario_id: UUID) -> List[Producto]:
+    """
+    AC-01: Obtiene todas las publicaciones pertenecientes a un usuario específico.
+    """
+    return (
+        db.query(Producto)
+        .filter(Producto.usuario_id == usuario_id)
+        .order_by(Producto.fecha_creacion.desc())
+        .all()
+    )
