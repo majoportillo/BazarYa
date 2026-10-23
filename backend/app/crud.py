@@ -267,3 +267,38 @@ def obtener_detalle_publicacion(db: Session, producto_id: int) -> Optional[Produ
     if not producto or producto.estado not in [EstadoProducto.ACTIVO, EstadoProducto.VENDIDO]:
         return None
     return producto
+
+# ==========================================
+# PUBLICACIONES POR CATEGORÍA (BYA-84: AC-06)
+# ==========================================
+
+def obtener_publicaciones_por_categoria(
+    db: Session, 
+    categoria_id: int, 
+    skip: int = 0, 
+    limit: int = 20
+) -> List[Producto]:
+    """
+    AC-06: Obtiene las publicaciones pertenecientes a una categoría específica.
+    AC-01 & AC-04: Muestra publicaciones en estado ACTIVO y VENDIDO (marcado como no disponible).
+    AC-02 & AC-03: Excluye explícitamente publicaciones en estado PENDING y RECHAZADO.
+    """
+    # Validar primero si la categoría existe y está activa
+    categoria = get_categoria_by_id(db, categoria_id)
+    if not categoria:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"La categoría con ID {categoria_id} no fue encontrada o se encuentra inactiva."
+        )
+
+    return (
+        db.query(Producto)
+        .filter(
+            Producto.categoria_id == categoria_id,
+            Producto.estado.in_([EstadoProducto.ACTIVO, EstadoProducto.VENDIDO]) # AC-01 al AC-04
+        )
+        .order_by(Producto.fecha_creacion.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )

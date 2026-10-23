@@ -276,5 +276,28 @@ class TestEsquemaProducto(unittest.TestCase):
         self.assertEqual(len(res_cat), 1)
         self.assertEqual(res_cat[0].id, p2.id)
 
+    # BYA-84: AC-06 - Filtrado por Categoría
+    def test_bya84_publicaciones_por_categoria_exito(self):
+        usuario_id = uuid.uuid4()
+        
+        # Categoría 1: Productos visibles e invisibles
+        p1_cat1 = Producto(usuario_id=usuario_id, categoria_id=1, nombre="Monitor LG", descripcion="Monitor 4K 27 pulgadas", precio=300.00, stock=1, estado=EstadoProducto.ACTIVO)
+        p2_cat1 = Producto(usuario_id=usuario_id, categoria_id=1, nombre="Teclado Mecánico", descripcion="Teclado RGB", precio=70.00, stock=1, estado=EstadoProducto.PENDING) # No debe salir
+        
+        # Categoría 2: Producto de otra categoría
+        p1_cat2 = Producto(usuario_id=usuario_id, categoria_id=2, nombre="Libro Python", descripcion="Libro de programación", precio=20.00, stock=1, estado=EstadoProducto.ACTIVO)
+
+        self.db.add_all([p1_cat1, p2_cat1, p1_cat2])
+        self.db.commit()
+
+        # Consultar publicaciones de Categoría 1
+        resultados = obtener_publicaciones_por_categoria(db=self.db, categoria_id=1)
+        ids_resultados = [p.id for p in resultados]
+
+        self.assertEqual(len(resultados), 1)
+        self.assertIn(p1_cat1.id, ids_resultados)
+        self.assertNotIn(p2_cat1.id, ids_resultados) # PENDING excluido
+        self.assertNotIn(p1_cat2.id, ids_resultados) # Otra categoría excluida
+        
 if __name__ == "__main__":
     unittest.main()

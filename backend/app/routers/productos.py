@@ -173,7 +173,6 @@ def buscar_productos(
         limit=limit
     )
 
-
 # ---------------------------------------------------------
 # ENDPOINT: Obtener Detalle de una Publicación (BYA-84: AC-07)
 # ---------------------------------------------------------
@@ -197,3 +196,30 @@ def obtener_detalle_producto(
             detail=f"La publicación con ID {producto_id} no existe o no está disponible para consulta pública."
         )
     return producto
+# ---------------------------------------------------------
+# ENDPOINT: Obtener Publicaciones por Categoría (BYA-84: AC-06)
+# ---------------------------------------------------------
+@router.get(
+    "/categoria/{categoria_id}",
+    response_model=List[ProductoResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Obtener publicaciones pertenecientes a una categoría específica (AC-06)"
+)
+
+def listar_publicaciones_por_categoria(
+    categoria_id: int,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db)
+):
+    """
+    Devuelve el listado de publicaciones asociadas a una categoría determinada.
+    - Excluye publicaciones en estado PENDING y RECHAZADO (AC-02, AC-03).
+    - Incluye productos VENDIDO marcando su disponibilidad (AC-04).
+    """
+    return crud.obtener_publicaciones_por_categoria(
+        db=db, 
+        categoria_id=categoria_id, 
+        skip=skip, 
+        limit=limit
+    )
