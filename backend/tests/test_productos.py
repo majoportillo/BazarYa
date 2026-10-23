@@ -1,14 +1,4 @@
-# Pruebas para la creación de publicaciones
-# Tarea: Integración del módulo Crear Publicación (BazarYa)
-# Criterios de Aceptación:
-#   AC-02: Nombre requerido y limpio (min 3)
-#   AC-03: Descripción requerida y limpia (min 10)
-#   AC-04: Precio estrictamente mayor a 0 (Decimal)
-#   AC-05: Validación de categoría existente y activa
-#   AC-06: Mínimo 1 imagen y máximo 5; sanitización Base64
-#   AC-07: Estado inicial obligatorio en PENDING
-#   AC-10: Sanitización de textos contra XSS
-
+# Pruebas para la creación de publicaciones y administracion de publicaciones
 import unittest
 from decimal import Decimal
 
@@ -100,7 +90,61 @@ class TestEsquemaProducto(unittest.TestCase):
                 usuario_id=usuario_intruso
             )
         self.assertEqual(context.exception.status_code, status.HTTP_403_FORBIDDEN)
+    
+    # BYA-76: AC-04 / AC-03 - Eliminación de Publicación
+    def test_ac04_eliminar_publicacion_propia_exito(self):
+        usuario_id = uuid.uuid4()
         
+        # Crear publicación de prueba
+        producto = Producto(
+            usuario_id=usuario_id,
+            categoria_id=1,
+            nombre="Producto a Eliminar",
+            descripcion="Descripción de prueba para eliminación",
+            precio=50.00,
+            stock=1,
+            estado=EstadoProducto.PENDING
+        )
+        self.db.add(producto)
+        self.db.commit()
+
+        # Ejecutar eliminación
+        resultado = eliminar_publicacion(
+            db=self.db,
+            producto_id=producto.id,
+            usuario_id=usuario_id
+        )
+        self.assertTrue(resultado)
+
+        # Verificar que ya no existe en la base de datos
+        prod_borrado = get_producto_by_id(self.db, producto.id)
+        self.assertIsNone(prod_borrado)
+
+    def test_ac03_eliminar_publicacion_ajena_error(self):
+        usuario_dueno = uuid.uuid4()
+        usuario_intruso = uuid.uuid4()
+
+        producto = Producto(
+            usuario_id=usuario_dueno,
+            categoria_id=1,
+            nombre="Producto Protegido",
+            descripcion="Descripción de prueba de autorización",
+            precio=150.00,
+            stock=1,
+            estado=EstadoProducto.PENDING
+        )
+        self.db.add(producto)
+        self.db.commit()
+
+        # Intentar eliminar con un usuario diferente debe lanzar 403
+        with self.assertRaises(HTTPException) as context:
+            eliminar_publicacion(
+                db=self.db,
+                producto_id=producto.id,
+                usuario_id=usuario_intruso
+            )
+        self.assertEqual(context.exception.status_code, status.HTTP_403_FORBIDDEN)
+
     # AC-04: Validación de Precio
     def test_ac04_precio_invalido(self):
         for precio_invalido in [0, -10.50, -1]:

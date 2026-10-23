@@ -91,3 +91,28 @@ def editar_publicacion(
         producto_update=producto_update, 
         usuario_id=usuario_actual.id
     )
+
+# ---------------------------------------------------------
+# ENDPOINT: Eliminar Publicación (BYA-76: AC-04, AC-03)
+# ---------------------------------------------------------
+@router.delete(
+    "/{producto_id}", 
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Eliminar una publicación propia (AC-04)"
+)
+def eliminar_publicacion(
+    producto_id: int,
+    db: Session = Depends(get_db),
+    usuario_actual: Usuario = Depends(get_current_user)
+):
+    """
+    Permite al vendedor eliminar permanentemente una de sus publicaciones.
+    - Devuelve HTTP 204 No Content en caso de éxito.
+    - Rechaza la acción con HTTP 403 si el producto pertenece a otro usuario.
+    """
+    crud.eliminar_publicacion(
+        db=db, 
+        producto_id=producto_id, 
+        usuario_id=usuario_actual.id
+    )
+    return None

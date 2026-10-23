@@ -157,3 +157,32 @@ def actualizar_publicacion(
     db.commit()
     db.refresh(producto)
     return producto
+
+# ==========================================
+# ELIMINACIÓN DE PUBLICACIÓN (BYA-76: AC-04)
+# ==========================================
+
+def eliminar_publicacion(db: Session, producto_id: int, usuario_id: UUID) -> bool:
+    """
+    AC-04: Elimina una publicación de la base de datos.
+    AC-03: Verifica estrictamente que la publicación pertenezca al usuario solicitante.
+    """
+    # 1. Buscar la publicación en la BD
+    producto = get_producto_by_id(db, producto_id)
+    if not producto:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"La publicación con ID {producto_id} no fue encontrada."
+        )
+
+    # 2. Validación estricta de propiedad (AC-03)
+    if producto.usuario_id != usuario_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para eliminar una publicación que no te pertenece."
+        )
+
+    # 3. Eliminar de la base de datos (las imágenes asociadas se borran en cascada)
+    db.delete(producto)
+    db.commit()
+    return True
