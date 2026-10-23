@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from .routers import productos
 from app.routers import productos
+from app.routers.auth import router as auth_router  # Ajusta la ruta según tu estructura de carpetas
 
 app = FastAPI(
     title="BazarYa API",
@@ -9,6 +10,7 @@ app = FastAPI(
 )
 
 # Incluir las rutas del módulo de productos
+app.include_router(auth_router)
 app.include_router(productos.router)
 
 @app.get("/")
