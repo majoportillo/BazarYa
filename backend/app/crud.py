@@ -218,3 +218,52 @@ def marcar_producto_como_vendido(db: Session, producto_id: int, usuario_id: UUID
     db.commit()
     db.refresh(producto)
     return producto
+
+# ==========================================
+# BÚSQUEDA Y FILTRADO DE PUBLICACIONES (BYA-84)
+# ==========================================
+
+def buscar_publicaciones(
+    db: Session,
+    q: Optional[str] = None,
+    categoria_id: Optional[int] = None,
+    skip: int = 0,
+    limit: int = 20
+) -> List[Producto]:
+    """
+    AC-01: Muestra publicaciones aprobadas (ACTIVO) y vendidas (VENDIDO).
+    AC-02 & AC-03: Excluye PENDING y RECHAZADO.
+    AC-04: Muestra productos VENDIDO (para marcar su indisponibilidad en UI).
+    AC-05: Filtra por palabra clave (q) en nombre o descripción (sin distinción de mayúsculas/minúsculas).
+    AC-06: Filtra por categoría si se provee.
+    """
+    # 1. Base query: Incluir solo estados visibles para compradores (ACTIVO y VENDIDO)
+    # Excluye explícitamente PENDING (AC-02) y RECHAZADO (AC-03)
+    query = db.query(Producto).filter(
+        Producto.estado.in_([EstadoProducto.ACTIVO, EstadoProducto.VENDIDO])
+    )
+
+    # 2. Filtro por Categoría (AC-06)
+    if categoria_id is not None:
+        query = query.filter(Producto.categoria_id == categoria_id)
+
+    # 3. Filtro por Palabra Clave (AC-05) - Búsqueda en nombre o descripción
+    if q and q.strip():
+        termino = f"%{q.strip()}%"
+        query = query.filter(
+            (Producto.nombre.ilike(termino)) | (Producto.descripcion.ilike(termino))
+        )
+
+    # 4. Ordenar por fecha de creación descendente y aplicar paginación
+    return query.order_by(Producto.fecha_creacion.desc()).offset(skip).limit(limit).all()
+
+
+def obtener_detalle_publicacion(db: Session, producto_id: int) -> Optional[Producto]:
+    """
+    AC-07: Consulta el detalle completo de una publicación específica.
+    Solo permite ver si el producto está en estado visible (ACTIVO o VENDIDO).
+    """
+    producto = get_producto_by_id(db, producto_id)
+    if not producto or producto.estado not in [EstadoProducto.ACTIVO, EstadoProducto.VENDIDO]:
+        return None
+    return producto

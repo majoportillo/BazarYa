@@ -231,6 +231,50 @@ class TestEsquemaProducto(unittest.TestCase):
                 usuario_id=usuario_intruso
             )
         self.assertEqual(context.exception.status_code, status.HTTP_403_FORBIDDEN)
+    
+    # BYA-84: Pruebas de Búsqueda y Navegación
+    def test_bya84_busqueda_excluye_pending_y_rechazado(self):
+        usuario_id = uuid.uuid4()
+        
+        # Crear productos en diferentes estados
+        p_activo = Producto(usuario_id=usuario_id, categoria_id=1, nombre="Silla de Oficina", descripcion="Silla ergonómica", precio=80.00, stock=1, estado=EstadoProducto.ACTIVO)
+        p_pending = Producto(usuario_id=usuario_id, categoria_id=1, nombre="Mesa de Centro", descripcion="Mesa de madera", precio=50.00, stock=1, estado=EstadoProducto.PENDING)
+        p_rechazado = Producto(usuario_id=usuario_id, categoria_id=1, nombre="Sillón Antiguo", descripcion="Sillón usado", precio=40.00, stock=1, estado=EstadoProducto.RECHAZADO)
+        p_vendido = Producto(usuario_id=usuario_id, categoria_id=1, nombre="Silla Gamer", descripcion="Silla de carreras", precio=120.00, stock=1, estado=EstadoProducto.VENDIDO)
+
+        self.db.add_all([p_activo, p_pending, p_rechazado, p_vendido])
+        self.db.commit()
+
+        # Búsqueda general
+        resultados = buscar_publicaciones(db=self.db, q="Silla")
+        ids_resultados = [p.id for p in resultados]
+
+        # AC-01 & AC-04: ACTIVO y VENDIDO sí aparecen
+        self.assertIn(p_activo.id, ids_resultados)
+        self.assertIn(p_vendido.id, ids_resultados)
+
+        # AC-02 & AC-03: PENDING y RECHAZADO NUNCA aparecen
+        self.assertNotIn(p_pending.id, ids_resultados)
+        self.assertNotIn(p_rechazado.id, ids_resultados)
+
+    def test_bya84_filtro_por_categoria_y_palabra_clave(self):
+        usuario_id = uuid.uuid4()
+        
+        p1 = Producto(usuario_id=usuario_id, categoria_id=1, nombre="Laptop Asus", descripcion="Laptop Gamer I7", precio=900.00, stock=1, estado=EstadoProducto.ACTIVO)
+        p2 = Producto(usuario_id=usuario_id, categoria_id=2, nombre="Camisa Azul", descripcion="Camisa de vestir", precio=25.00, stock=1, estado=EstadoProducto.ACTIVO)
+
+        self.db.add_all([p1, p2])
+        self.db.commit()
+
+        # Filtrar por palabra clave "Asus" (AC-05)
+        res_palabra = buscar_publicaciones(db=self.db, q="Asus")
+        self.assertEqual(len(res_palabra), 1)
+        self.assertEqual(res_palabra[0].id, p1.id)
+
+        # Filtrar por Categoría 2 (AC-06)
+        res_cat = buscar_publicaciones(db=self.db, categoria_id=2)
+        self.assertEqual(len(res_cat), 1)
+        self.assertEqual(res_cat[0].id, p2.id)
 
 if __name__ == "__main__":
     unittest.main()

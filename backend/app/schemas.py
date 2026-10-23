@@ -176,3 +176,19 @@ class ProductoResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+# Esquema para elementos en resultados de búsqueda / catálogo (AC-08)
+class ProductoResumenResponse(BaseModel):
+    id: int
+    nombre: str
+    descripcion: str
+    precio: Decimal
+    stock: int
+    estado: EstadoProducto  # Permite verificar si está ACTIVO o VENDIDO (AC-04)
+    categoria_id: int
+    categoria: CategoriaResponse
+    imagenes: List[ImagenProductoResponse]
+    fecha_creacion: datetime
+
+    class Config:
+        from_attributes = True

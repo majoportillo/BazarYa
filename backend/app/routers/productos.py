@@ -141,3 +141,59 @@ def cambiar_estado_vendido(
         producto_id=producto_id, 
         usuario_id=usuario_actual.id
     )
+
+# ---------------------------------------------------------
+# ENDPOINT: Búsqueda y Filtrado de Publicaciones (BYA-84: AC-01 al AC-06, AC-08)
+# ---------------------------------------------------------
+@router.get(
+    "/buscar",
+    response_model=List[ProductoResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Buscar publicaciones por palabra clave y/o categoría (BYA-84)"
+)
+def buscar_productos(
+    q: Optional[str] = Query(None, description="Palabra clave para buscar en título o descripción"),
+    categoria_id: Optional[int] = Query(None, gt=0, description="ID de la categoría a filtrar"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db)
+):
+    """
+    Permite a compradores explorar productos:
+    - Búsqueda por término (AC-05).
+    - Filtro por categoría (AC-06).
+    - Excluye PENDING y RECHAZADO (AC-02, AC-03).
+    - Muestra publicaciones vendidas con su respectivo estado (AC-04).
+    """
+    return crud.buscar_publicaciones(
+        db=db,
+        q=q,
+        categoria_id=categoria_id,
+        skip=skip,
+        limit=limit
+    )
+
+
+# ---------------------------------------------------------
+# ENDPOINT: Obtener Detalle de una Publicación (BYA-84: AC-07)
+# ---------------------------------------------------------
+@router.get(
+    "/{producto_id}",
+    response_model=ProductoResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Obtener detalle de una publicación (AC-07)"
+)
+def obtener_detalle_producto(
+    producto_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Permite abrir y visualizar la información completa de un artículo publicado (AC-07).
+    """
+    producto = crud.obtener_detalle_publicacion(db=db, producto_id=producto_id)
+    if not producto:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"La publicación con ID {producto_id} no existe o no está disponible para consulta pública."
+        )
+    return producto
