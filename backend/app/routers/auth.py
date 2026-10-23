@@ -46,3 +46,20 @@ def registrar_usuario(usuario_data: UsuarioCreate, db: Session = Depends(get_db)
 
     # 5. Devolver la respuesta usando el esquema (automáticamente oculta el password_hash)
     return nuevo_usuario
+
+# ==========================================
+# DEPENDENCIA DE AUTORIZACIÓN PARA ADMINS (BYA-97: AC-01, AC-08, AC-09)
+# ==========================================
+def get_current_admin_user(
+    usuario_actual: Usuario = Depends(get_current_user)
+) -> Usuario:
+    """
+    AC-01, AC-08, AC-09: Verifica que el usuario autenticado tenga el rol ADMINISTRADOR.
+    Si un usuario normal intenta acceder, bloquea con HTTP 403 Forbidden.
+    """
+    if usuario_actual.rol != RolUsuario.ADMINISTRADOR:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acceso denegado: Se requieren privilegios de Administrador."
+        )
+    return usuario_actual

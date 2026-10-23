@@ -298,6 +298,44 @@ class TestEsquemaProducto(unittest.TestCase):
         self.assertIn(p1_cat1.id, ids_resultados)
         self.assertNotIn(p2_cat1.id, ids_resultados) # PENDING excluido
         self.assertNotIn(p1_cat2.id, ids_resultados) # Otra categoría excluida
+    
+    # BYA-97: Pruebas de Moderación Administrativa
+    def test_bya97_admin_puede_consultar_pendientes(self):
+        # Crear usuario admin y producto pendiente
+        admin_id = uuid.uuid4()
+        p_pending = Producto(
+            usuario_id=admin_id,
+            categoria_id=1,
+            nombre="Producto para Moderar",
+            descripcion="Descripción pendiente",
+            precio=100.00,
+            stock=1,
+            estado=EstadoProducto.PENDING
+        )
+        self.db.add(p_pending)
+        self.db.commit()
+
+        # Consultar la cola de pendientes
+        pendientes = obtener_publicaciones_pendientes(self.db)
+        ids_pendientes = [p.id for p in pendientes]
+
+        self.assertIn(p_pending.id, ids_pendientes)
+
+    def test_bya97_usuario_normal_bloqueado_en_admin_endpoint(self):
+        # Simula intento de acceso de usuario no admin
+        usuario_normal = Usuario(
+            id=uuid.uuid4(),
+            nombre_completo="Usuario Común",
+            email="normal@test.com",
+            password_hash="hash",
+            telefono="12345678",
+            rol=RolUsuario.COMPRADOR_VENDEDOR
+        )
+
+        with self.assertRaises(HTTPException) as context:
+            get_current_admin_user(usuario_actual=usuario_normal)
+        
+        self.assertEqual(context.exception.status_code, status.HTTP_403_FORBIDDEN)
         
 if __name__ == "__main__":
     unittest.main()

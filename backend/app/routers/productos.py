@@ -223,3 +223,25 @@ def listar_publicaciones_por_categoria(
         skip=skip, 
         limit=limit
     )
+
+# ---------------------------------------------------------
+# ENDPOINT: Consultar Publicaciones Pendientes (BYA-97: AC-01, AC-02, AC-08, AC-09)
+# ---------------------------------------------------------
+@router.get(
+    "/admin/pendientes",
+    response_model=List[ProductoResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Consultar publicaciones pendientes de moderación (Solo ADMIN)"
+)
+def listar_publicaciones_pendientes(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    admin_actual: Usuario = Depends(get_current_admin_user) # Inyección con protección de ROL ADMIN
+):
+    """
+    Permite únicamente al Administrador revisar la cola de publicaciones en estado PENDING.
+    - Bloquea con HTTP 403 a usuarios con rol COMPRADOR_VENDEDOR (AC-08).
+    - Requiere autenticación válida mediante JWT (AC-09).
+    """
+    return crud.obtener_publicaciones_pendientes(db=db, skip=skip, limit=limit)
