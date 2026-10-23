@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 from typing import List, Optional
 from uuid import UUID
+from fastapi import HTTPException, status
 from app.models import Producto, ImagenProducto, Categoria, EstadoProducto
 from app.schemas import ProductoCreate, CategoriaResponse
 
@@ -26,8 +27,16 @@ def get_categoria_by_id(db: Session, categoria_id: int) -> Optional[Categoria]:
 def crear_publicacion(db: Session, producto_in: ProductoCreate, usuario_id: UUID) -> Producto:
     """
     Crea una publicación asociada al usuario creador (AC-09).
-    Nace automáticamente en estado 'PENDING' (AC-07).
+    Aplica validación de categoría previa e inserta en estado 'PENDING' (AC-07).
     """
+    # 1. Validación previa: Verificar existencia y estado de la categoría en BD
+    categoria = get_categoria_by_id(db, producto_in.categoria_id)
+    if not categoria:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"La categoría con ID {producto_in.categoria_id} no existe o se encuentra inactiva."
+        )
+
     # 1. Crear la instancia de Producto
     nuevo_producto = Producto(
         usuario_id=usuario_id,                  # AC-09
@@ -35,7 +44,7 @@ def crear_publicacion(db: Session, producto_in: ProductoCreate, usuario_id: UUID
         nombre=producto_in.nombre,              # AC-02
         descripcion=producto_in.descripcion,    # AC-03
         precio=producto_in.precio,              # AC-04
-        stock=1,
+        stock=producto_in.stock,
         estado=EstadoProducto.PENDING           # AC-07 (Estado inicial obligatorio)
     )
     
