@@ -116,3 +116,28 @@ def eliminar_publicacion(
         usuario_id=usuario_actual.id
     )
     return None
+
+# ---------------------------------------------------------
+# ENDPOINT: Marcar Publicación como Vendida (BYA-76: AC-05, AC-06)
+# ---------------------------------------------------------
+@router.patch(
+    "/{producto_id}/vender", 
+    response_model=ProductoResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Marcar una publicación como vendida (AC-05, AC-06)"
+)
+def cambiar_estado_vendido(
+    producto_id: int,
+    db: Session = Depends(get_db),
+    usuario_actual: Usuario = Depends(get_current_user)
+):
+    """
+    Permite al vendedor cambiar el estado de su publicación a VENDIDO.
+    - La publicación deja de aparecer en el catálogo público disponible (AC-06).
+    - Lanza HTTP 403 si el usuario intenta modificar una publicación ajena.
+    """
+    return crud.marcar_producto_como_vendido(
+        db=db, 
+        producto_id=producto_id, 
+        usuario_id=usuario_actual.id
+    )

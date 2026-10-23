@@ -186,3 +186,35 @@ def eliminar_publicacion(db: Session, producto_id: int, usuario_id: UUID) -> boo
     db.delete(producto)
     db.commit()
     return True
+
+# ==========================================
+# MARCAR COMO VENDIDO (BYA-76: AC-05, AC-06)
+# ==========================================
+
+def marcar_producto_como_vendido(db: Session, producto_id: int, usuario_id: UUID) -> Producto:
+    """
+    AC-05: Transiciona el estado de la publicación a VENDIDO.
+    AC-06: Al no estar en estado ACTIVO, se excluye automáticamente del catálogo público.
+    AC-03: Garantiza que solo el propietario del producto realice el cambio.
+    """
+    # 1. Buscar la publicación en la base de datos
+    producto = get_producto_by_id(db, producto_id)
+    if not producto:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"La publicación con ID {producto_id} no fue encontrada."
+        )
+
+    # 2. Validación estricta de propiedad (AC-03)
+    if producto.usuario_id != usuario_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para modificar el estado de una publicación que no te pertenece."
+        )
+
+    # 3. Cambiar el estado a VENDIDO
+    producto.estado = EstadoProducto.VENDIDO
+    
+    db.commit()
+    db.refresh(producto)
+    return producto

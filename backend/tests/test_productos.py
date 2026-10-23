@@ -175,7 +175,62 @@ class TestEsquemaProducto(unittest.TestCase):
         ])
         with self.assertRaises(ValidationError):
             ProductoCreate(**datos)
+    # BYA-76: AC-05 / AC-06 - Marcar como Vendido y Exclusión del Catálogo
+    def test_ac05_ac06_marcar_como_vendido_exito(self):
+        usuario_id = uuid.uuid4()
+        
+        # Crear publicación activa de prueba
+        producto = Producto(
+            usuario_id=usuario_id,
+            categoria_id=1,
+            nombre="Bicicleta de Montaña",
+            descripcion="Bicicleta en buen estado",
+            precio=200.00,
+            stock=1,
+            estado=EstadoProducto.ACTIVO
+        )
+        self.db.add(producto)
+        self.db.commit()
 
+        # Cambiar estado a VENDIDO
+        prod_actualizado = marcar_producto_como_vendido(
+            db=self.db,
+            producto_id=producto.id,
+            usuario_id=usuario_id
+        )
+        
+        # Verificación AC-05: El estado cambia a VENDIDO
+        self.assertEqual(prod_actualizado.estado, EstadoProducto.VENDIDO)
+
+        # Verificación AC-06: No debe figurar dentro de las publicaciones del catálogo público activo
+        catalogo = get_productos_publicos(self.db)
+        ids_en_catalogo = [p.id for p in catalogo]
+        self.assertNotIn(producto.id, ids_en_catalogo)
+
+    def test_ac05_marcar_como_vendido_usuario_ajeno_error(self):
+        usuario_dueno = uuid.uuid4()
+        usuario_intruso = uuid.uuid4()
+
+        producto = Producto(
+            usuario_id=usuario_dueno,
+            categoria_id=1,
+            nombre="Celular Usado",
+            descripcion="Smartphone en buen estado",
+            precio=120.00,
+            stock=1,
+            estado=EstadoProducto.ACTIVO
+        )
+        self.db.add(producto)
+        self.db.commit()
+
+        # Un usuario no propietario debe recibir un error 403 HTTP
+        with self.assertRaises(HTTPException) as context:
+            marcar_producto_como_vendido(
+                db=self.db,
+                producto_id=producto.id,
+                usuario_id=usuario_intruso
+            )
+        self.assertEqual(context.exception.status_code, status.HTTP_403_FORBIDDEN)
 
 if __name__ == "__main__":
     unittest.main()
