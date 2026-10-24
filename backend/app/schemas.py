@@ -188,7 +188,32 @@ class ProductoResumenResponse(BaseModel):
     categoria_id: int
     categoria: CategoriaResponse
     imagenes: List[ImagenProductoResponse]
+# ==========================================
+# NUEVOS ESQUEMAS PARA PERFILES (BYA-57 y BYA-58)
+# ==========================================
+
+class UsuarioUpdate(BaseModel):
+    nombre_completo: Optional[str] = Field(None, min_length=2, max_length=100)
+    telefono: Optional[str] = Field(None, min_length=8, max_length=20)
+    fotografia_url: Optional[str] = None
+
+class UsuarioPublicResponse(BaseModel):
+    id: UUID
+    nombre_completo: str
+    fotografia_url: Optional[str]
+    rol: RolUsuario
     fecha_creacion: datetime
 
     class Config:
         from_attributes = True
+
+class UsuarioLogin(BaseModel):
+    email: EmailStr = Field(..., description="Correo electrónico registrado")
+    password: str = Field(..., min_length=1, description="Contraseña del usuario")
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def email_to_lower(cls, v: str) -> str:
+        if isinstance(v, str):
+            return v.strip().lower()
+        return v

@@ -3,9 +3,9 @@ import uuid
 from sqlalchemy import Column, String, Text, Numeric, Integer, Boolean, DateTime, Enum, ForeignKey, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship, declarative_base
-from app.database import Base
+from .database import Base  # <--- IMPORTANTE: Usar la Base centralizada de database.py
 
-Base = declarative_base()
+
 
 # ==========================================
 # ENUMS DEL SYSTEMA
