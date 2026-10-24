@@ -217,3 +217,20 @@ class UsuarioLogin(BaseModel):
         if isinstance(v, str):
             return v.strip().lower()
         return v
+
+# ==========================================
+# ESQUEMA PARA CONTACTO DE VENDEDOR (BYA-93)
+# ==========================================
+from uuid import UUID
+from typing import Optional
+from pydantic import BaseModel
+
+class VendedorContactoResponse(BaseModel):
+    vendedor_id: UUID
+    nombre_completo: str
+    email: str
+    telefono: Optional[str] = None
+    nota: str = "Contacto directo entre comprador y vendedor (Sin pasarela de pagos ni envíos)."
+
+    class Config:
+        from_attributes = True

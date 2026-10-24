@@ -3,8 +3,30 @@ from sqlalchemy import select
 from typing import List, Optional
 from uuid import UUID
 from fastapi import HTTPException, status
-from app.models import Producto, ImagenProducto, Categoria, EstadoProducto
-from app.schemas import ProductoCreate, CategoriaResponse
+
+from .models import Producto, ImagenProducto, Categoria, EstadoProducto, Usuario
+from .schemas import ProductoCreate, CategoriaResponse, ProductoUpdate
+
+
+# ==========================================
+# CONTACTO DE VENDEDOR (BYA-93)
+# ==========================================
+
+def get_contacto_vendedor_by_producto_id(db: Session, producto_id: int):
+    """
+    BYA-93: Obtiene la información de contacto del vendedor a partir del ID de un producto.
+    """
+    # 1. Buscar el producto usando la función existente
+    producto = get_producto_by_id(db, producto_id)
+    if not producto:
+        return None, "Producto no encontrado"
+
+    # 2. Buscar al usuario (vendedor) vinculado al producto
+    vendedor = db.query(Usuario).filter(Usuario.id == producto.usuario_id).first()
+    if not vendedor:
+        return None, "Vendedor no encontrado"
+
+    return vendedor, None
 
 
 # ==========================================
@@ -14,6 +36,7 @@ from app.schemas import ProductoCreate, CategoriaResponse
 def get_categorias(db: Session) -> List[Categoria]:
     """Obtiene todas las categorías activas para el catálogo (AC-05)."""
     return db.query(Categoria).filter(Categoria.activo == True).all()
+
 
 def get_categoria_by_id(db: Session, categoria_id: int) -> Optional[Categoria]:
     """Valida la existencia de una categoría."""
@@ -37,21 +60,21 @@ def crear_publicacion(db: Session, producto_in: ProductoCreate, usuario_id: UUID
             detail=f"La categoría con ID {producto_in.categoria_id} no existe o se encuentra inactiva."
         )
 
-    # 1. Crear la instancia de Producto
+    # 2. Crear la instancia de Producto
     nuevo_producto = Producto(
-        usuario_id=usuario_id,                  # AC-09
+        usuario_id=usuario_id,  # AC-09
         categoria_id=producto_in.categoria_id,  # AC-05
-        nombre=producto_in.nombre,              # AC-02
-        descripcion=producto_in.descripcion,    # AC-03
-        precio=producto_in.precio,              # AC-04
+        nombre=producto_in.nombre,  # AC-02
+        descripcion=producto_in.descripcion,  # AC-03
+        precio=producto_in.precio,  # AC-04
         stock=producto_in.stock,
-        estado=EstadoProducto.PENDING           # AC-07 (Estado inicial obligatorio)
+        estado=EstadoProducto.PENDING  # AC-07 (Estado inicial obligatorio)
     )
-    
+
     db.add(nuevo_producto)
     db.flush()  # Obtiene el ID del producto recién insertado sin hacer commit definitivo
 
-    # 2. Asociar las imágenes del producto (AC-06)
+    # 3. Asociar las imágenes del producto (AC-06)
     for img in producto_in.imagenes:
         nueva_imagen = ImagenProducto(
             producto_id=nuevo_producto.id,
@@ -83,6 +106,7 @@ def get_producto_by_id(db: Session, producto_id: int) -> Optional[Producto]:
     """Obtiene el detalle de un producto por su ID."""
     return db.query(Producto).filter(Producto.id == producto_id).first()
 
+
 def obtener_productos_por_usuario(db: Session, usuario_id: UUID) -> List[Producto]:
     """
     AC-01: Obtiene todas las publicaciones pertenecientes a un usuario específico.
@@ -94,15 +118,16 @@ def obtener_productos_por_usuario(db: Session, usuario_id: UUID) -> List[Product
         .all()
     )
 
+
 # ==========================================
 # ACTUALIZACIÓN / EDICIÓN DE PUBLICACIÓN (BYA-76)
 # ==========================================
 
 def actualizar_publicacion(
-    db: Session, 
-    producto_id: int, 
-    producto_update: ProductoUpdate, 
-    usuario_id: UUID
+        db: Session,
+        producto_id: int,
+        producto_update: ProductoUpdate,
+        usuario_id: UUID
 ) -> Producto:
     """
     AC-02: Permite editar una publicación existente.
@@ -151,12 +176,13 @@ def actualizar_publicacion(
 
     # 6. Actualizar campos escalares permitidos (excluyendo el estado por AC-07)
     for campo, valor in datos_actualizacion.items():
-        if campo != "estado": # AC-07
+        if campo != "estado":  # AC-07
             setattr(producto, campo, valor)
 
     db.commit()
     db.refresh(producto)
     return producto
+
 
 # ==========================================
 # ELIMINACIÓN DE PUBLICACIÓN (BYA-76: AC-04)
@@ -187,6 +213,7 @@ def eliminar_publicacion(db: Session, producto_id: int, usuario_id: UUID) -> boo
     db.commit()
     return True
 
+
 # ==========================================
 # MARCAR COMO VENDIDO (BYA-76: AC-05, AC-06)
 # ==========================================
@@ -214,21 +241,22 @@ def marcar_producto_como_vendido(db: Session, producto_id: int, usuario_id: UUID
 
     # 3. Cambiar el estado a VENDIDO
     producto.estado = EstadoProducto.VENDIDO
-    
+
     db.commit()
     db.refresh(producto)
     return producto
+
 
 # ==========================================
 # BÚSQUEDA Y FILTRADO DE PUBLICACIONES (BYA-84)
 # ==========================================
 
 def buscar_publicaciones(
-    db: Session,
-    q: Optional[str] = None,
-    categoria_id: Optional[int] = None,
-    skip: int = 0,
-    limit: int = 20
+        db: Session,
+        q: Optional[str] = None,
+        categoria_id: Optional[int] = None,
+        skip: int = 0,
+        limit: int = 20
 ) -> List[Producto]:
     """
     AC-01: Muestra publicaciones aprobadas (ACTIVO) y vendidas (VENDIDO).
@@ -238,7 +266,6 @@ def buscar_publicaciones(
     AC-06: Filtra por categoría si se provee.
     """
     # 1. Base query: Incluir solo estados visibles para compradores (ACTIVO y VENDIDO)
-    # Excluye explícitamente PENDING (AC-02) y RECHAZADO (AC-03)
     query = db.query(Producto).filter(
         Producto.estado.in_([EstadoProducto.ACTIVO, EstadoProducto.VENDIDO])
     )
@@ -261,29 +288,26 @@ def buscar_publicaciones(
 def obtener_detalle_publicacion(db: Session, producto_id: int) -> Optional[Producto]:
     """
     AC-07: Consulta el detalle completo de una publicación específica.
-    Solo permite ver si el producto está en estado visible (ACTIVO o VENDIDO).
     """
     producto = get_producto_by_id(db, producto_id)
     if not producto or producto.estado not in [EstadoProducto.ACTIVO, EstadoProducto.VENDIDO]:
         return None
     return producto
 
+
 # ==========================================
 # PUBLICACIONES POR CATEGORÍA (BYA-84: AC-06)
 # ==========================================
 
 def obtener_publicaciones_por_categoria(
-    db: Session, 
-    categoria_id: int, 
-    skip: int = 0, 
-    limit: int = 20
+        db: Session,
+        categoria_id: int,
+        skip: int = 0,
+        limit: int = 20
 ) -> List[Producto]:
     """
     AC-06: Obtiene las publicaciones pertenecientes a una categoría específica.
-    AC-01 & AC-04: Muestra publicaciones en estado ACTIVO y VENDIDO (marcado como no disponible).
-    AC-02 & AC-03: Excluye explícitamente publicaciones en estado PENDING y RECHAZADO.
     """
-    # Validar primero si la categoría existe y está activa
     categoria = get_categoria_by_id(db, categoria_id)
     if not categoria:
         raise HTTPException(
@@ -295,7 +319,7 @@ def obtener_publicaciones_por_categoria(
         db.query(Producto)
         .filter(
             Producto.categoria_id == categoria_id,
-            Producto.estado.in_([EstadoProducto.ACTIVO, EstadoProducto.VENDIDO]) # AC-01 al AC-04
+            Producto.estado.in_([EstadoProducto.ACTIVO, EstadoProducto.VENDIDO])
         )
         .order_by(Producto.fecha_creacion.desc())
         .offset(skip)
@@ -303,14 +327,15 @@ def obtener_publicaciones_por_categoria(
         .all()
     )
 
+
 # ==========================================
 # MODERACIÓN DE PUBLICACIONES (BYA-97: AC-02)
 # ==========================================
 
 def obtener_publicaciones_pendientes(
-    db: Session, 
-    skip: int = 0, 
-    limit: int = 20
+        db: Session,
+        skip: int = 0,
+        limit: int = 20
 ) -> List[Producto]:
     """
     AC-02: Obtiene el listado de publicaciones en estado PENDING para revisión administrativa.
@@ -318,7 +343,7 @@ def obtener_publicaciones_pendientes(
     return (
         db.query(Producto)
         .filter(Producto.estado == EstadoProducto.PENDING)
-        .order_by(Producto.fecha_creacion.asc()) # Prioriza las publicaciones más antiguas
+        .order_by(Producto.fecha_creacion.asc())
         .offset(skip)
         .limit(limit)
         .all()
