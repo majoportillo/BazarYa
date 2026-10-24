@@ -132,6 +132,34 @@ class ProductoCreate(BaseModel):
                 raise ValueError("Solo una imagen puede ser marcada como principal.")
         return self
 
+# Esquema para Edición de Publicaciones (BYA-76: AC-02, AC-07)
+class ProductoUpdate(BaseModel):
+    nombre: Optional[str] = Field(None, min_length=3, max_length=150)
+    descripcion: Optional[str] = Field(None, min_length=10)
+    precio: Optional[Decimal] = Field(None, gt=0, decimal_places=2)
+    stock: Optional[int] = Field(None, ge=0)
+    categoria_id: Optional[int] = Field(None, gt=0)
+    imagenes: Optional[List[ImagenProductoCreate]] = Field(None, min_items=1, max_items=5)
+
+    @field_validator("nombre", "descripcion", mode="before")
+    @classmethod
+    def strip_and_validate_strings(cls, v: Optional[str]) -> Optional[str]:
+        if isinstance(v, str):
+            v_clean = v.strip()
+            if not v_clean:
+                raise ValueError("El campo no puede estar vacío ni contener solo espacios")
+            return html.escape(v_clean)
+        return v
+
+    @model_validator(mode="after")
+    def validar_imagen_principal(self):
+        if self.imagenes:
+            principales = [img for img in self.imagenes if img.es_principal]
+            if len(principales) == 0:
+                self.imagenes[0].es_principal = True
+            elif len(principales) > 1:
+                raise ValueError("Solo una imagen puede ser marcada como principal.")
+        return self
 
 class ProductoResponse(BaseModel):
     id: int
@@ -148,6 +176,18 @@ class ProductoResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+# Esquema para elementos en resultados de búsqueda / catálogo (AC-08)
+class ProductoResumenResponse(BaseModel):
+    id: int
+    nombre: str
+    descripcion: str
+    precio: Decimal
+    stock: int
+    estado: EstadoProducto  # Permite verificar si está ACTIVO o VENDIDO (AC-04)
+    categoria_id: int
+    categoria: CategoriaResponse
+    imagenes: List[ImagenProductoResponse]
 # ==========================================
 # NUEVOS ESQUEMAS PARA PERFILES (BYA-57 y BYA-58)
 # ==========================================
