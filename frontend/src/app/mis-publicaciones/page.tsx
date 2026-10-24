@@ -1,5 +1,6 @@
 "use client";
 
+import MenuBazarYa from "../../components/MenuBazarYa";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 
@@ -77,6 +78,27 @@ export default function MisPublicaciones() {
 
   useEffect(() => { void cargar(); }, [cargar]);
 
+  async function ejecutarAccion(id: number, accion: "eliminar" | "vender") {
+    const confirmado = window.confirm(accion === "eliminar" ? "¿Eliminar esta publicación definitivamente?" : "¿Marcar este artículo como vendido?");
+    if (!confirmado) return;
+    const token = localStorage.getItem("token") || localStorage.getItem("access_token");
+    if (!token) { setError("Iniciá sesión para continuar."); return; }
+    setError(""); setAviso(""); setGuardando(true);
+    try {
+      const respuesta = await fetch(`${API}/api/productos/${id}${accion === "vender" ? "/vender" : ""}`, {
+        method: accion === "vender" ? "PATCH" : "DELETE",
+        headers: {Authorization: `Bearer ${token}`},
+      });
+      if (!respuesta.ok) {
+        const datos = await respuesta.json().catch(() => null);
+        throw new Error(typeof datos?.detail === "string" ? datos.detail : `La operación no se completó (${respuesta.status}).`);
+      }
+      await cargar();
+      setAviso(accion === "vender" ? "Producto marcado como vendido." : "Publicación eliminada correctamente.");
+    } catch (e) { setError(e instanceof Error ? e.message : "No se pudo completar la operación."); }
+    finally { setGuardando(false); }
+  }
+
   function abrirEdicion(p: Producto) {
     setEditando(p.id);
     setAviso("");
@@ -123,7 +145,7 @@ export default function MisPublicaciones() {
     <main style={{minHeight: "100vh", background: "#f8fafc", color: "#1e293b"}}>
       <header style={{background: "white", borderBottom: "1px solid #e2e8f0", padding: "20px 6%", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 16}}>
         <Link href="/" style={{fontSize: 28, fontWeight: 700, color: "#2563eb", textDecoration: "none"}}>BazarYa</Link>
-        <nav style={{display: "flex", gap: 20}}><Link href="/">Inicio</Link><Link href="/publicaciones">Catálogo</Link><Link href="/profile">Mi perfil</Link></nav>
+        <MenuBazarYa />
       </header>
       <section style={{padding: "40px 6%", maxWidth: 1100, margin: "auto"}}>
         <h1 style={{fontSize: 32, fontWeight: 700, color: "#1e3a8a"}}>Mis publicaciones</h1>
@@ -139,7 +161,11 @@ export default function MisPublicaciones() {
                 <p style={{marginTop: 10, color: "#475569"}}>{p.descripcion}</p>
                 <p style={{marginTop: 12}}>Q {Number(p.precio).toFixed(2)} · Stock: {p.stock}</p>
                 <p>Categoría: {p.categoria?.nombre ?? "Sin categoría"} · Estado: {p.estado}</p>
-                <button style={{...boton, marginTop: 15}} onClick={() => abrirEdicion(p)}>Editar publicación</button>
+                <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:15}}>
+                  <button style={boton} onClick={() => abrirEdicion(p)}>Editar publicación</button>
+                  {!(["VENDIDO","SOLD","RECHAZADO"].includes(p.estado)) && <button disabled={guardando} style={{...boton,background:"#0f766e"}} onClick={() => void ejecutarAccion(p.id,"vender")}>Marcar vendido</button>}
+                  <button disabled={guardando} style={{...boton,background:"#b91c1c"}} onClick={() => void ejecutarAccion(p.id,"eliminar")}>Eliminar</button>
+                </div>
               </> :
                 <form onSubmit={e => {e.preventDefault(); void guardar(p.id);}} style={{display: "grid", gap: 14}}>
                   <h2 style={{fontSize: 23, fontWeight: 700}}>Editar publicación #{p.id}</h2>

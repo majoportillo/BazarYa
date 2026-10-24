@@ -1,3 +1,4 @@
+import MenuBazarYa from "../../../../components/MenuBazarYa";
 
 import Link from "next/link";
 import { Suspense } from "react";
@@ -149,18 +150,7 @@ async function ContenidoContacto({
                     BazarYa
                 </Link>
 
-                <nav style={{ display: "flex", gap: 20 }}>
-                    <Link href="/" style={{ color: "#334155" }}>
-                        Inicio
-                    </Link>
-
-                    <Link
-                        href="/publicaciones"
-                        style={{ color: "#334155" }}
-                    >
-                        Publicaciones
-                    </Link>
-                </nav>
+                <MenuBazarYa />
             </header>
 
             <section

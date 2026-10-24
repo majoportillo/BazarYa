@@ -1,6 +1,6 @@
-
 "use client";
 
+import MenuBazarYa from "../../components/MenuBazarYa";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { InputText } from "primereact/inputtext";
@@ -133,17 +133,7 @@ export default function Publicaciones() {
                     BazarYa
                 </Link>
 
-                <nav style={{ display: "flex", gap: 20 }}>
-                    <Link href="/" style={{ color: "#334155" }}>
-                        Inicio
-                    </Link>
-                    <Link
-                        href="/publicaciones"
-                        style={{ color: "#2563eb" }}
-                    >
-                        Publicaciones
-                    </Link>
-                </nav>
+                <MenuBazarYa />
             </header>
 
             <section
