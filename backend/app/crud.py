@@ -302,3 +302,24 @@ def obtener_publicaciones_por_categoria(
         .limit(limit)
         .all()
     )
+
+# ==========================================
+# MODERACIÓN DE PUBLICACIONES (BYA-97: AC-02)
+# ==========================================
+
+def obtener_publicaciones_pendientes(
+    db: Session, 
+    skip: int = 0, 
+    limit: int = 20
+) -> List[Producto]:
+    """
+    AC-02: Obtiene el listado de publicaciones en estado PENDING para revisión administrativa.
+    """
+    return (
+        db.query(Producto)
+        .filter(Producto.estado == EstadoProducto.PENDING)
+        .order_by(Producto.fecha_creacion.asc()) # Prioriza las publicaciones más antiguas
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
