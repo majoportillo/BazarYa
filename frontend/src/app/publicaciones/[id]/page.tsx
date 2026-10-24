@@ -1,6 +1,7 @@
 
 import { Suspense } from "react";
 import Link from "next/link";
+import { PageLoading } from "@/components/LoadingBazarYa";
 
 type DetalleProps = {
     params: Promise<{ id: string }>;
@@ -56,16 +57,12 @@ export default function DetalleProducto({ params }: DetalleProps) {
     return (
         <Suspense
             fallback={
-                <main
-                    style={{
-                        minHeight: "100vh",
-                        background: "#f8fafc",
-                        color: "#1e293b",
-                        padding: 40,
-                    }}
-                >
-                    Cargando información del producto...
-                </main>
+                <PageLoading
+                    layout="page"
+                    title="Cargando información del producto"
+                    subtitle="Estamos preparando las fotos, el precio y los datos del artículo."
+                    variant="detail"
+                />
             }
         >
             <ContenidoDetalle params={params} />

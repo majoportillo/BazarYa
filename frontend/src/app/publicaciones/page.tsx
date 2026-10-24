@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
+import { SectionLoading } from "@/components/LoadingBazarYa";
 
 const API = "http://127.0.0.1:8000";
 
@@ -133,7 +134,7 @@ export default function Publicaciones() {
                     BazarYa
                 </Link>
 
-                <nav style={{ display: "flex", gap: 20 }}>
+                <nav style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
                     <Link href="/" style={{ color: "#334155" }}>
                         Inicio
                     </Link>
@@ -143,6 +144,10 @@ export default function Publicaciones() {
                     >
                         Publicaciones
                     </Link>
+                    <Link href="/create-post" style={{ color: "#2563eb", fontWeight: 700 }}>Vender producto</Link>
+                    <Link href="/mis-publicaciones" style={{ color: "#334155" }}>Mis publicaciones</Link>
+                    <Link href="/profile" style={{ color: "#334155" }}>Mi perfil</Link>
+                    <Link href="/admin" style={{ color: "#334155" }}>Administración</Link>
                 </nav>
             </header>
 
@@ -240,12 +245,18 @@ export default function Publicaciones() {
                 >
                     Productos publicados
                 </h2>
-
+                <Link 
+                    href="/create-post" 
+                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                >
+                    + Crear publicación
+                </Link>
                 {cargando ? (
-                    <div style={{ textAlign: "center", padding: 50 }}>
-                        <i className="pi pi-spin pi-spinner" />
-                        <p>Cargando publicaciones...</p>
-                    </div>
+                    <SectionLoading
+                        title="Cargando publicaciones"
+                        subtitle="Estamos buscando productos aprobados y aplicando tus filtros."
+                        variant="cards"
+                    />
                 ) : error ? (
                     <div
                         role="alert"

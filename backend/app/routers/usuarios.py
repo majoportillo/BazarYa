@@ -6,6 +6,7 @@ from typing import List
 from ..database import get_db
 from ..models import Usuario
 from ..schemas import UsuarioResponse, UsuarioUpdate, UsuarioPublicResponse
+from app.routers.auth import get_current_user
 
 router = APIRouter(prefix="/usuarios", tags=["Perfiles de Usuario"])
 
@@ -14,14 +15,12 @@ router = APIRouter(prefix="/usuarios", tags=["Perfiles de Usuario"])
 # usaremos el correo por query param o header, o puedes adaptarlo a tu token actual.
 
 @router.get("/me", response_model=UsuarioResponse)
-def obtener_perfil_privado(email: str, db: Session = Depends(get_db)):
+def obtener_perfil_privado(current_user: Usuario = Depends(get_current_user)):
     """
     AC-01: El usuario autenticado puede consultar su información privada.
+    Exige un Token JWT válido en los Headers para autorizar la petición.
     """
-    usuario = db.query(Usuario).filter(Usuario.email == email).first()
-    if not usuario:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    return usuario
+    return current_user
 
 
 @router.put("/me", response_model=UsuarioResponse)
