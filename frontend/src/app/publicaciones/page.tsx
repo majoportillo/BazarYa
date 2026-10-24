@@ -240,7 +240,12 @@ export default function Publicaciones() {
                 >
                     Productos publicados
                 </h2>
-
+                <Link 
+                    href="/create-post" 
+                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                >
+                    + Crear publicación
+                </Link>
                 {cargando ? (
                     <div style={{ textAlign: "center", padding: 50 }}>
                         <i className="pi pi-spin pi-spinner" />

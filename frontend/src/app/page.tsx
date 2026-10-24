@@ -64,6 +64,14 @@ export default function Home() {
             >
               Publicaciones
             </Link>
+            <Link 
+                href="/create-post" 
+                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+              >
+                + Publicar
+              </Link>
+            <Link href="/login">Iniciar Sesión</Link>
+            <Link href="/register">Registrarse</Link>
           </nav>
         </header>
 

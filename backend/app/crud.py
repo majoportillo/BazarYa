@@ -97,6 +97,7 @@ def get_productos_publicos(db: Session, skip: int = 0, limit: int = 10) -> List[
     return (
         db.query(Producto)
         .filter(Producto.estado == EstadoProducto.ACTIVO)  # Filtra excluyendo PENDING (AC-08)
+        .order_by(Producto.fecha_creacion.desc())
         .offset(skip)
         .limit(limit)
         .all()
@@ -253,11 +254,11 @@ def marcar_producto_como_vendido(db: Session, producto_id: int, usuario_id: UUID
 # ==========================================
 
 def buscar_publicaciones(
-        db: Session,
-        q: Optional[str] = None,
-        categoria_id: Optional[int] = None,
-        skip: int = 0,
-        limit: int = 20
+    db: Session,
+    q: Optional[str] = None,
+    categoria_id: Optional[int] = None,
+    skip: int = 0,
+    limit: int = 20
 ) -> List[Producto]:
     """
     AC-01: Muestra publicaciones aprobadas (ACTIVO) y vendidas (VENDIDO).
@@ -284,7 +285,6 @@ def buscar_publicaciones(
 
     # 4. Ordenar por fecha de creación descendente y aplicar paginación
     return query.order_by(Producto.fecha_creacion.desc()).offset(skip).limit(limit).all()
-
 
 def obtener_detalle_publicacion(db: Session, producto_id: int) -> Optional[Producto]:
     """
