@@ -10,16 +10,14 @@
 #   AC-06 validacion de campos obligatorios
 #   AC-07 endpoint documentado en OpenAPI
 #
-# Las pruebas del endpoint se saltan mientras no exista app.main (BYA-45).
-#
 # Para correrlas desde la carpeta backend:
 #   python -m unittest discover -s tests -v
 
 import unittest
 import uuid
 
-# ruta que asumimos para el registro, cambiar si el endpoint queda con otra
-RUTA_REGISTRO = "/api/usuarios/registro"
+# ruta del endpoint de registro (BYA-45)
+RUTA_REGISTRO = "/auth/register"
 
 # tamaños segun la tabla usuarios
 MAX_NOMBRE = 100
@@ -47,8 +45,7 @@ except Exception as e:
     error_schemas = e
 
 try:
-    from fastapi.testclient import TestClient
-    from app.main import app
+    import utilidades_pruebas as util
     error_api = None
 except Exception as e:
     error_api = e
@@ -113,12 +110,14 @@ class TestEsquemaRegistro(unittest.TestCase):
         self.assertEqual(len(usuario.nombre_completo), MAX_NOMBRE)
 
 
-@unittest.skipIf(error_api is not None, "Todavia no existe el endpoint de registro (BYA-45)")
 class TestEndpointRegistro(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        cls.client = TestClient(app)
+    def setUp(self):
+        if error_api:
+            self.fail("No se pudo cargar la API: " + repr(error_api))
+        if not util.ruta_existe("post", RUTA_REGISTRO):
+            self.skipTest("No existe el endpoint " + RUTA_REGISTRO)
+        self.client = util.client
 
     def registrar(self, **cambios):
         datos = datos_usuario(**cambios)
@@ -141,6 +140,16 @@ class TestEndpointRegistro(unittest.TestCase):
         self.assertNotIn("password", resp.json())
         self.assertNotIn("password_hash", resp.json())
         self.assertNotIn(datos["password"], resp.text)
+
+    # AC-03
+    def test_ac03_password_guardada_encriptada(self):
+        datos, resp = self.registrar()
+        self.assertEqual(resp.status_code, 201, resp.text)
+        db = util.database.SessionLocal()
+        usuario = db.query(util.models.Usuario).filter_by(email=datos["email"]).first()
+        db.close()
+        self.assertNotEqual(usuario.password_hash, datos["password"])
+        self.assertTrue(util.auth.pwd_context.verify(datos["password"], usuario.password_hash))
 
     # AC-05
     def test_ac05_email_repetido(self):
