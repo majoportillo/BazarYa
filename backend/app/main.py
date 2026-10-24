@@ -1,17 +1,17 @@
 from fastapi import FastAPI
-from .routers import productos
-from app.routers import productos
-from app.routers.auth import router as auth_router  # Ajusta la ruta según tu estructura de carpetas
+from app.routers import productos, usuarios
+from app.routers.auth import router as auth_router
+from app.database import engine, Base
+from app.models import Usuario, Producto, Categoria, ImagenProducto  # <--- IMPORTANTE: Importar los modelos aquí
+from app.routers import auth
 
-app = FastAPI(
-    title="BazarYa API",
-    description="API REST para la gestión de productos, usuarios y publicaciones",
-    version="1.0.0"
-)
+# Esto lee los modelos importados y crea las tablas en PostgreSQL si no existen
+Base.metadata.create_all(bind=engine)
 
-# Incluir las rutas del módulo de productos
+
 app.include_router(auth_router)
 app.include_router(productos.router)
+app.include_router(usuarios.router)
 
 @app.get("/")
 def root():
