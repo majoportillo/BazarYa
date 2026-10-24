@@ -6,53 +6,100 @@ import Link from "next/link";
 import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
 
-type Producto = {
-    id: string;
-    titulo: string;
-    descripcion: string;
-    precio: number;
-    categoria: string;
-    estado: "PENDING" | "APPROVED" | "REJECTED" | "SOLD";
+const API = "http://127.0.0.1:8000";
+
+type Categoria = {
+    id: number;
+    nombre: string;
+    descripcion?: string;
+    activo: boolean;
 };
 
-// Se conectará a la API cuando esté disponible.
-const productos: Producto[] = [];
+type Producto = {
+    id: number;
+    nombre: string;
+    descripcion: string;
+    precio: number | string;
+    categoria_id: number;
+    estado: string;
+};
 
 export default function Publicaciones() {
     const [busqueda, setBusqueda] = useState("");
     const [categoria, setCategoria] = useState("Todas");
+    const [categorias, setCategorias] = useState<Categoria[]>([]);
+    const [productos, setProductos] = useState<Producto[]>([]);
+    const [cargando, setCargando] = useState(true);
+    const [error, setError] = useState("");
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         setBusqueda(params.get("q") || "");
+
+        fetch(`${API}/api/productos/categorias`)
+            .then(async (respuesta) => {
+                if (!respuesta.ok) {
+                    throw new Error("No se pudieron obtener las categorías");
+                }
+                return respuesta.json();
+            })
+            .then((datos: Categoria[]) => setCategorias(datos))
+            .catch((err) => console.error(err));
     }, []);
 
-    const categorias = [
-        "Todas",
-        ...new Set(
-            productos
-                .filter((p) => p.estado === "APPROVED" || p.estado === "SOLD")
-                .map((p) => p.categoria)
-        ),
-    ];
+    useEffect(() => {
+        const controlador = new AbortController();
 
-    const resultados = productos.filter((producto) => {
-        const visible =
-            producto.estado === "APPROVED" ||
-            producto.estado === "SOLD";
+        const temporizador = setTimeout(async () => {
+            setCargando(true);
+            setError("");
 
-        const texto = busqueda.toLowerCase().trim();
+            try {
+                const parametros = new URLSearchParams();
+                parametros.set("limit", "100");
 
-        const coincide =
-            producto.titulo.toLowerCase().includes(texto) ||
-            producto.descripcion.toLowerCase().includes(texto);
+                if (busqueda.trim()) {
+                    parametros.set("q", busqueda.trim());
+                }
 
-        const coincideCategoria =
-            categoria === "Todas" ||
-            producto.categoria === categoria;
+                if (categoria !== "Todas") {
+                    parametros.set("categoria_id", categoria);
+                }
 
-        return visible && coincide && coincideCategoria;
-    });
+                const respuesta = await fetch(
+                    `${API}/api/productos/buscar?${parametros.toString()}`,
+                    { signal: controlador.signal }
+                );
+
+                if (!respuesta.ok) {
+                    throw new Error(
+                        `Error ${respuesta.status} al cargar publicaciones`
+                    );
+                }
+
+                const datos: Producto[] = await respuesta.json();
+                setProductos(datos);
+            } catch (err) {
+                if (controlador.signal.aborted) return;
+
+                setProductos([]);
+                setError(
+                    err instanceof Error
+                        ? err.message
+                        : "No se pudo conectar con BazarYa"
+                );
+            } finally {
+                if (!controlador.signal.aborted) {
+                    setCargando(false);
+                }
+            }
+        }, 300);
+
+        return () => {
+            clearTimeout(temporizador);
+            controlador.abort();
+        };
+    }, [busqueda, categoria]);
 
     return (
         <main
@@ -90,7 +137,10 @@ export default function Publicaciones() {
                     <Link href="/" style={{ color: "#334155" }}>
                         Inicio
                     </Link>
-                    <Link href="/publicaciones" style={{ color: "#2563eb" }}>
+                    <Link
+                        href="/publicaciones"
+                        style={{ color: "#2563eb" }}
+                    >
                         Publicaciones
                     </Link>
                 </nav>
@@ -155,11 +205,15 @@ export default function Publicaciones() {
                             borderRadius: 6,
                         }}
                     >
-                        {categorias.map((cat) => (
-                            <option key={cat} value={cat}>
-                                {cat}
-                            </option>
-                        ))}
+                        <option value="Todas">Todas</option>
+
+                        {categorias
+                            .filter((cat) => cat.activo)
+                            .map((cat) => (
+                                <option key={cat.id} value={String(cat.id)}>
+                                    {cat.nombre}
+                                </option>
+                            ))}
                     </select>
 
                     <Button
@@ -187,7 +241,24 @@ export default function Publicaciones() {
                     Productos publicados
                 </h2>
 
-                {resultados.length === 0 ? (
+                {cargando ? (
+                    <div style={{ textAlign: "center", padding: 50 }}>
+                        <i className="pi pi-spin pi-spinner" />
+                        <p>Cargando publicaciones...</p>
+                    </div>
+                ) : error ? (
+                    <div
+                        role="alert"
+                        style={{
+                            background: "#fef2f2",
+                            color: "#991b1b",
+                            borderRadius: 12,
+                            padding: 24,
+                        }}
+                    >
+                        No se pudieron cargar las publicaciones: {error}
+                    </div>
+                ) : productos.length === 0 ? (
                     <div
                         style={{
                             background: "white",
@@ -211,8 +282,8 @@ export default function Publicaciones() {
                         </h3>
 
                         <p style={{ color: "#64748b" }}>
-                            El catálogo se conectará próximamente
-                            con la API de BazarYa.
+                            Todavía no hay productos que coincidan con
+                            tu búsqueda o categoría.
                         </p>
                     </div>
                 ) : (
@@ -224,50 +295,77 @@ export default function Publicaciones() {
                             gap: 20,
                         }}
                     >
-                        {resultados.map((producto) => (
-                            <article
-                                key={producto.id}
-                                style={{
-                                    background: "white",
-                                    padding: 22,
-                                    borderRadius: 12,
-                                    border: "1px solid #e2e8f0",
-                                }}
-                            >
-                                <h3 style={{ fontSize: 20, fontWeight: "bold" }}>
-                                    {producto.titulo}
-                                </h3>
+                        {productos.map((producto) => {
+                            const vendida =
+                                producto.estado === "VENDIDO" ||
+                                producto.estado === "SOLD";
 
-                                <p style={{ color: "#64748b", marginTop: 8 }}>
-                                    {producto.descripcion}
-                                </p>
-
-                                <p style={{ marginTop: 12, fontWeight: "bold" }}>
-                                    Q {producto.precio.toFixed(2)}
-                                </p>
-
-                                {producto.estado === "SOLD" && (
-                                    <p style={{ color: "#b45309", marginTop: 8 }}>
-                                        Vendido — No disponible
-                                    </p>
-                                )}
-
-                                <Link
-                                    href={`/publicaciones/${producto.id}`}
+                            return (
+                                <article
+                                    key={producto.id}
                                     style={{
-                                        display: "inline-block",
-                                        marginTop: 15,
-                                        color: "#2563eb",
-                                        fontWeight: "bold",
+                                        background: "white",
+                                        padding: 22,
+                                        borderRadius: 12,
+                                        border: "1px solid #e2e8f0",
                                     }}
                                 >
-                                    Ver detalle
-                                </Link>
-                            </article>
-                        ))}
+                                    <h3
+                                        style={{
+                                            fontSize: 20,
+                                            fontWeight: "bold",
+                                        }}
+                                    >
+                                        {producto.nombre}
+                                    </h3>
+
+                                    <p
+                                        style={{
+                                            color: "#64748b",
+                                            marginTop: 8,
+                                        }}
+                                    >
+                                        {producto.descripcion}
+                                    </p>
+
+                                    <p
+                                        style={{
+                                            marginTop: 12,
+                                            fontWeight: "bold",
+                                        }}
+                                    >
+                                        Q {Number(producto.precio).toFixed(2)}
+                                    </p>
+
+                                    {vendida && (
+                                        <p
+                                            style={{
+                                                color: "#b45309",
+                                                marginTop: 8,
+                                            }}
+                                        >
+                                            Vendido — No disponible
+                                        </p>
+                                    )}
+
+                                    <Link
+                                        href={`/publicaciones/${producto.id}`}
+                                        style={{
+                                            display: "inline-block",
+                                            marginTop: 15,
+                                            color: "#2563eb",
+                                            fontWeight: "bold",
+                                        }}
+                                    >
+                                        Ver detalle
+                                    </Link>
+                                </article>
+                            );
+                        })}
                     </div>
                 )}
             </section>
         </main>
     );
 }
+
