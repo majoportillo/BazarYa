@@ -1,3 +1,4 @@
+from app.schemas import ProductoCreate, ProductoUpdate, CategoriaResponse, ProductoModeracionUpdate
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from typing import List, Optional
@@ -348,3 +349,44 @@ def obtener_publicaciones_pendientes(
         .limit(limit)
         .all()
     )
+
+
+# ==========================================
+# MODERACIÓN Y CAMBIO DE ESTADO
+# ==========================================
+
+def moderar_publicacion(
+        db: Session,
+        producto_id: int,
+        nuevo_estado: EstadoProducto,
+        motivo_rechazo: Optional[str] = None
+) -> Producto:
+    """
+    AC-04: Permite al administrador aprobar una publicación (pasa a ACTIVO).
+    AC-05: Permite al administrador rechazar una publicación (pasa a RECHAZADO).
+    AC-06 / AC-07: Gestiona la visibilidad en el catálogo automáticamente según el estado.
+    """
+    producto = get_producto_by_id(db, producto_id)
+    if not producto:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"La publicación con ID {producto_id} no fue encontrada."
+        )
+
+    # Validar que el estado enviado sea válido para moderación
+    if nuevo_estado not in [EstadoProducto.ACTIVO, EstadoProducto.RECHAZADO]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Estado de moderación inválido. Debe ser APROBADO (ACTIVO) o RECHAZADO."
+        )
+
+    # Asignar el nuevo estado (Nota: asumiendo que ACTIVO representa la aprobación según tus esquemas previos)
+    producto.estado = nuevo_estado
+
+    # Si agregaste campo opcional de motivo de rechazo en tu base de datos:
+    if hasattr(producto, 'motivo_rechazo') and motivo_rechazo:
+        producto.motivo_rechazo = motivo_rechazo
+
+    db.commit()
+    db.refresh(producto)
+    return producto

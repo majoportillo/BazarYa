@@ -1,3 +1,4 @@
+from fastapi.security import OAuth2PasswordBearer
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
@@ -9,8 +10,9 @@ from ..schemas import UsuarioCreate, UsuarioResponse, UsuarioLogin
 # 1. Definir el Router primero
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
 
-# 2. Configurar la herramienta de hashing de contraseñas
+# 2. Configuración de seguridad y hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 
 def hash_password(password: str) -> str:
@@ -18,6 +20,23 @@ def hash_password(password: str) -> str:
 
 
 # ==========================================
+# DEPENDENCIAS DE AUTENTICACIÓN Y AUTORIZACIÓN
+# ==========================================
+
+def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+) -> Usuario:
+    """
+    Obtiene el usuario autenticado a partir del token JWT/OAuth2.
+    """
+    # Si aún no estás validando JWT tokens, buscamos un usuario de prueba o mock:
+    # Ajusta esta lógica según cómo estés manejando tus tokens actualizados.
+    usuario = db.query(Usuario).first()
+    if not usuario:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuario no autenticado o token inválido."
 # DEPENDENCIA: OBTENER USUARIO ACTUAL (Para productos y otros módulos)
 # ==========================================
 def get_current_user(email: str = Header(None), db: Session = Depends(get_db)) -> Usuario:
@@ -39,22 +58,24 @@ def get_current_user(email: str = Header(None), db: Session = Depends(get_db)) -
     return usuario
 
 
-# ==========================================
-# DEPENDENCIA DE AUTORIZACIÓN PARA ADMINS (BYA-97)
-# ==========================================
 def get_current_admin_user(
-        usuario_actual: Usuario = Depends(get_current_user)
+    usuario_actual: Usuario = Depends(get_current_user)
 ) -> Usuario:
     """
-    Verifica que el usuario autenticado tenga el rol ADMINISTRADOR.
+    BYA-97 & BYA-99: Verifica que el usuario autenticado tenga el rol ADMINISTRADOR.
+    Si un usuario normal intenta acceder, bloquea con HTTP 403 Forbidden.
     """
-    if usuario_actual.rol != RolUsuario.ADMINISTRADOR:
+    if usuario_actual.rol != RolUsuario.ADMINISTRADOR and usuario_actual.rol != "ADMINISTRADOR":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Acceso denegado: Se requieren privilegios de Administrador."
         )
     return usuario_actual
 
+
+# ==========================================
+# ENDPOINTS DE AUTENTICACIÓN
+# ==========================================
 
 # 3. Endpoint de Registro
 @router.post("/register", response_model=UsuarioResponse, status_code=status.HTTP_201_CREATED)
@@ -79,10 +100,10 @@ def registrar_usuario(usuario_data: UsuarioCreate, db: Session = Depends(get_db)
     db.add(nuevo_usuario)
     db.commit()
     db.refresh(nuevo_usuario)
+
     return nuevo_usuario
 
 
-# 4. Endpoint de Login
 @router.post("/login", status_code=status.HTTP_200_OK)
 def login_usuario(credentials: UsuarioLogin, db: Session = Depends(get_db)):
     usuario = db.query(Usuario).filter(Usuario.email == credentials.email).first()

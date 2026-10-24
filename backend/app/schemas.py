@@ -217,13 +217,16 @@ class UsuarioLogin(BaseModel):
         if isinstance(v, str):
             return v.strip().lower()
         return v
+# ==========================================
+# ESQUEMA PARA MODERACIÓN DE PRODUCTOS
+# ==========================================
+class ProductoModeracionUpdate(BaseModel):
+    estado: EstadoProducto
+    motivo_rechazo: Optional[str] = None
 
 # ==========================================
 # ESQUEMA PARA CONTACTO DE VENDEDOR (BYA-93)
 # ==========================================
-from uuid import UUID
-from typing import Optional
-from pydantic import BaseModel
 
 class VendedorContactoResponse(BaseModel):
     vendedor_id: UUID
