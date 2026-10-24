@@ -1,27 +1,70 @@
 
 import { Suspense } from "react";
 import Link from "next/link";
-import ContactoVendedor from "@/components/ContactoVendedor";
 
 type DetalleProps = {
     params: Promise<{ id: string }>;
 };
 
-export default function DetalleProducto({
-                                            params,
-                                        }: DetalleProps) {
+type ImagenProducto = {
+    id: number;
+    url_imagen: string;
+    es_principal: boolean;
+};
+
+type Producto = {
+    id: number;
+    usuario_id: string;
+    nombre: string;
+    descripcion: string;
+    precio: number | string;
+    stock: number;
+    estado: string;
+    categoria: {
+        id: number;
+        nombre: string;
+    };
+    imagenes: ImagenProducto[];
+};
+
+const API_URL =
+    process.env.API_URL || "http://127.0.0.1:8000";
+
+async function obtenerProducto(id: string): Promise<Producto | null> {
+    try {
+        const respuesta = await fetch(
+            `${API_URL}/api/productos/${encodeURIComponent(id)}`,
+            { cache: "no-store" }
+        );
+
+        if (!respuesta.ok) return null;
+
+        return (await respuesta.json()) as Producto;
+    } catch {
+        return null;
+    }
+}
+
+const tarjeta: React.CSSProperties = {
+    background: "#ffffff",
+    border: "1px solid #e2e8f0",
+    borderRadius: 12,
+    padding: 28,
+};
+
+export default function DetalleProducto({ params }: DetalleProps) {
     return (
         <Suspense
             fallback={
                 <main
                     style={{
-                        padding: 40,
-                        color: "#1e293b",
-                        background: "#f8fafc",
                         minHeight: "100vh",
+                        background: "#f8fafc",
+                        color: "#1e293b",
+                        padding: 40,
                     }}
                 >
-                    Cargando publicación...
+                    Cargando información del producto...
                 </main>
             }
         >
@@ -30,10 +73,20 @@ export default function DetalleProducto({
     );
 }
 
-async function ContenidoDetalle({
-                                    params,
-                                }: DetalleProps) {
-    const { id: productoId } = await params;
+async function ContenidoDetalle({ params }: DetalleProps) {
+    const { id } = await params;
+
+    const producto = /^\d+$/.test(id)
+        ? await obtenerProducto(id)
+        : null;
+
+    const vendido = producto?.estado === "VENDIDO";
+    const disponible =
+        producto?.estado === "ACTIVO" && producto.stock > 0;
+
+    const imagenPrincipal =
+        producto?.imagenes?.find((imagen) => imagen.es_principal) ??
+        producto?.imagenes?.[0];
 
     return (
         <main
@@ -43,7 +96,6 @@ async function ContenidoDetalle({
                 color: "#1e293b",
             }}
         >
-            {/* Encabezado */}
             <header
                 style={{
                     background: "#ffffff",
@@ -68,36 +120,19 @@ async function ContenidoDetalle({
                     BazarYa
                 </Link>
 
-                <nav
-                    style={{
-                        display: "flex",
-                        gap: 20,
-                        flexWrap: "wrap",
-                    }}
-                >
-                    <Link
-                        href="/"
-                        style={{
-                            color: "#334155",
-                            textDecoration: "none",
-                        }}
-                    >
+                <nav style={{ display: "flex", gap: 20 }}>
+                    <Link href="/" style={{ color: "#334155" }}>
                         Inicio
                     </Link>
-
                     <Link
                         href="/publicaciones"
-                        style={{
-                            color: "#334155",
-                            textDecoration: "none",
-                        }}
+                        style={{ color: "#2563eb" }}
                     >
                         Publicaciones
                     </Link>
                 </nav>
             </header>
 
-            {/* Contenido principal */}
             <section style={{ padding: "35px 6%" }}>
                 <Link
                     href="/publicaciones"
@@ -109,135 +144,249 @@ async function ContenidoDetalle({
                     ← Volver al catálogo
                 </Link>
 
-                <h1
-                    style={{
-                        marginTop: 30,
-                        marginBottom: 25,
-                        fontSize: 32,
-                        fontWeight: "bold",
-                        color: "#1e3a8a",
-                    }}
-                >
-                    Detalle de publicación
-                </h1>
-
-                {/* Distribución de información */}
-                <div
-                    style={{
-                        display: "grid",
-                        gridTemplateColumns:
-                            "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
-                        gap: 25,
-                    }}
-                >
-                    {/* Fotografías */}
+                {!producto ? (
                     <div
                         style={{
-                            background: "#ffffff",
-                            border: "1px solid #e2e8f0",
-                            borderRadius: 12,
-                            padding: 30,
-                            minHeight: 320,
-                            display: "flex",
-                            flexDirection: "column",
-                            justifyContent: "center",
-                            alignItems: "center",
-                            gap: 15,
+                            ...tarjeta,
+                            marginTop: 30,
+                            textAlign: "center",
+                            padding: 50,
                         }}
                     >
                         <i
-                            className="pi pi-image"
+                            className="pi pi-exclamation-circle"
                             style={{
-                                fontSize: 65,
+                                fontSize: 46,
                                 color: "#94a3b8",
                             }}
                         />
-
+                        <h1
+                            style={{
+                                fontSize: 27,
+                                color: "#1e3a8a",
+                                marginTop: 20,
+                            }}
+                        >
+                            Publicación no disponible
+                        </h1>
                         <p
                             style={{
                                 color: "#64748b",
-                                textAlign: "center",
+                                marginTop: 12,
                             }}
                         >
-                            Las fotografías del producto se mostrarán
-                            cuando se conecte la API.
+                            No encontramos el producto o no fue posible
+                            consultar la API de BazarYa.
                         </p>
                     </div>
-
-                    {/* Información del producto */}
-                    <div
-                        style={{
-                            background: "#ffffff",
-                            border: "1px solid #e2e8f0",
-                            borderRadius: 12,
-                            padding: 30,
-                        }}
-                    >
-                        <p
+                ) : (
+                    <>
+                        <h1
                             style={{
-                                color: "#64748b",
-                                fontSize: 14,
-                                marginBottom: 15,
-                                overflowWrap: "anywhere",
-                            }}
-                        >
-                            Identificador: {productoId}
-                        </p>
-
-                        <h2
-                            style={{
-                                fontSize: 25,
+                                marginTop: 30,
+                                marginBottom: 25,
+                                fontSize: 32,
                                 fontWeight: "bold",
-                                marginBottom: 20,
-                                color: "#1e293b",
+                                color: "#1e3a8a",
                             }}
                         >
-                            Información del producto
-                        </h2>
+                            {producto.nombre}
+                        </h1>
+
+                        <div
+                            style={{
+                                display: "grid",
+                                gridTemplateColumns:
+                                    "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
+                                gap: 25,
+                            }}
+                        >
+                            <div style={tarjeta}>
+                                {imagenPrincipal ? (
+                                    <img
+                                        src={imagenPrincipal.url_imagen}
+                                        alt={producto.nombre}
+                                        style={{
+                                            width: "100%",
+                                            maxHeight: 380,
+                                            objectFit: "contain",
+                                            borderRadius: 10,
+                                        }}
+                                    />
+                                ) : (
+                                    <div
+                                        style={{
+                                            minHeight: 270,
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            gap: 15,
+                                            color: "#94a3b8",
+                                        }}
+                                    >
+                                        <i
+                                            className="pi pi-image"
+                                            style={{ fontSize: 65 }}
+                                        />
+                                        <p>Producto sin fotografía</p>
+                                    </div>
+                                )}
+
+                                {producto.imagenes?.length > 1 && (
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            flexWrap: "wrap",
+                                            gap: 10,
+                                            marginTop: 20,
+                                        }}
+                                    >
+                                        {producto.imagenes.map((imagen) => (
+                                            <img
+                                                key={imagen.id}
+                                                src={imagen.url_imagen}
+                                                alt={`Fotografía de ${producto.nombre}`}
+                                                style={{
+                                                    width: 75,
+                                                    height: 75,
+                                                    objectFit: "cover",
+                                                    borderRadius: 8,
+                                                    border: "1px solid #e2e8f0",
+                                                }}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div style={tarjeta}>
+                                <p
+                                    style={{
+                                        color: "#64748b",
+                                        fontSize: 14,
+                                        marginBottom: 15,
+                                    }}
+                                >
+                                    Publicación #{producto.id}
+                                </p>
+
+                                <h2
+                                    style={{
+                                        fontSize: 25,
+                                        fontWeight: "bold",
+                                        marginBottom: 20,
+                                    }}
+                                >
+                                    Información del producto
+                                </h2>
+
+                                <p
+                                    style={{
+                                        color: "#475569",
+                                        marginBottom: 20,
+                                        whiteSpace: "pre-line",
+                                    }}
+                                >
+                                    {producto.descripcion}
+                                </p>
+
+                                <p
+                                    style={{
+                                        color: "#2563eb",
+                                        fontSize: 27,
+                                        fontWeight: "bold",
+                                        marginBottom: 20,
+                                    }}
+                                >
+                                    Q {Number(producto.precio).toFixed(2)}
+                                </p>
+
+                                <p style={{ marginBottom: 12 }}>
+                                    <strong>Categoría: </strong>
+                                    {producto.categoria?.nombre ??
+                                        "Sin categoría"}
+                                </p>
+
+                                <p style={{ marginBottom: 12 }}>
+                                    <strong>Existencias: </strong>
+                                    {producto.stock}
+                                </p>
+
+                                <p style={{ marginBottom: 20 }}>
+                                    <strong>Disponibilidad: </strong>
+                                    <span
+                                        style={{
+                                            color: disponible
+                                                ? "#15803d"
+                                                : "#b45309",
+                                            fontWeight: "bold",
+                                        }}
+                                    >
+                                        {vendido
+                                            ? "Vendido — No disponible"
+                                            : disponible
+                                              ? "Disponible"
+                                              : "No disponible"}
+                                    </span>
+                                </p>
+
+                                <div
+                                    style={{
+                                        borderTop: "1px solid #e2e8f0",
+                                        paddingTop: 20,
+                                        marginTop: 20,
+                                    }}
+                                >
+                                    <h3
+                                        style={{
+                                            fontSize: 20,
+                                            fontWeight: "bold",
+                                            marginBottom: 15,
+                                        }}
+                                    >
+                                        Contacto del vendedor
+                                    </h3>
+
+                                    {disponible ? (
+                                        <Link
+                                            href={`/publicaciones/${producto.id}/contacto`}
+                                            style={{
+                                                display: "block",
+                                                background: "#2563eb",
+                                                color: "#ffffff",
+                                                padding: "13px 20px",
+                                                borderRadius: 8,
+                                                textAlign: "center",
+                                                textDecoration: "none",
+                                                fontWeight: "bold",
+                                            }}
+                                        >
+                                            Contactar al vendedor
+                                        </Link>
+                                    ) : (
+                                        <p style={{ color: "#64748b" }}>
+                                            Esta publicación no está
+                                            disponible para contacto.
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
 
                         <p
                             style={{
+                                marginTop: 30,
+                                textAlign: "center",
                                 color: "#64748b",
-                                marginBottom: 15,
                             }}
                         >
-                            La información de esta publicación
-                            todavía no está disponible.
+                            BazarYa no procesa pagos ni administra envíos.
+                            El contacto se realiza directamente entre
+                            comprador y vendedor.
                         </p>
-
-                        <p style={{ marginBottom: 12 }}>
-                            <strong>Precio:</strong> Pendiente
-                        </p>
-
-                        <p style={{ marginBottom: 12 }}>
-                            <strong>Categoría:</strong> Pendiente
-                        </p>
-
-                        <p style={{ marginBottom: 12 }}>
-                            <strong>Disponibilidad:</strong> Por consultar
-                        </p>
-
-                        {/* Componente reutilizable del vendedor */}
-                        <ContactoVendedor
-                            vendedor={null}
-                            productoId={productoId}
-                            disponible={false}
-                        />
-                    </div>
-                </div>
-
-                {/* Aviso sobre el funcionamiento */}
-                <p
-                    style={{
-                        marginTop: 30,
-                        textAlign: "center",
-                        color: "#64748b",
-                    }}
-                >
-                    BazarYa no procesa pagos ni administra envíos.
-                    El contacto se realizará directamente entre
-                    comprador y vendedor.
-                </p>
+                    </>
+                )}
             </section>
         </main>
     );

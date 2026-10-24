@@ -7,23 +7,89 @@ type ContactoProps = {
 };
 
 type VendedorContacto = {
-    nombre: string;
-    telefono?: string | null;
-    email?: string | null;
-    whatsapp?: string | null;
+    vendedor_id: string;
+    nombre_completo: string;
+    telefono: string | null;
+    email: string | null;
+    nota?: string;
 };
 
-// Los datos vendrán de la API del backend.
-// Por ahora no se muestran datos inventados.
-const vendedor: VendedorContacto | null = null;
+type ResultadoContacto = {
+    contacto: VendedorContacto | null;
+    error: string | null;
+};
+
+const API_URL =
+    process.env.API_URL || "http://127.0.0.1:8000";
+
+async function obtenerContacto(
+    id: string
+): Promise<ResultadoContacto> {
+    try {
+        const respuesta = await fetch(
+            `${API_URL}/api/productos/${encodeURIComponent(id)}/contacto`,
+            { cache: "no-store" }
+        );
+
+        if (respuesta.status === 404) {
+            return {
+                contacto: null,
+                error: "No se encontró información pública del vendedor para esta publicación.",
+            };
+        }
+
+        if (!respuesta.ok) {
+            return {
+                contacto: null,
+                error: `No se pudo consultar el contacto (error ${respuesta.status}).`,
+            };
+        }
+
+        const contacto: VendedorContacto = await respuesta.json();
+
+        return { contacto, error: null };
+    } catch {
+        return {
+            contacto: null,
+            error: "No fue posible conectarse con la API de BazarYa.",
+        };
+    }
+}
+
+function obtenerWhatsApp(
+    telefono: string | null
+): string | null {
+    if (!telefono) return null;
+
+    const digitos = telefono.replace(/\D/g, "");
+
+    // Número guatemalteco de 8 dígitos.
+    if (/^[2-9]\d{7}$/.test(digitos)) {
+        return `502${digitos}`;
+    }
+
+    // Número guatemalteco con código de país.
+    if (/^502[2-9]\d{7}$/.test(digitos)) {
+        return digitos;
+    }
+
+    return null;
+}
 
 export default function PaginaContacto({
-                                           params,
-                                       }: ContactoProps) {
+    params,
+}: ContactoProps) {
     return (
         <Suspense
             fallback={
-                <main style={{ padding: 40 }}>
+                <main
+                    style={{
+                        minHeight: "100vh",
+                        background: "#f8fafc",
+                        padding: 40,
+                        color: "#1e293b",
+                    }}
+                >
                     Cargando información de contacto...
                 </main>
             }
@@ -34,12 +100,22 @@ export default function PaginaContacto({
 }
 
 async function ContenidoContacto({
-                                     params,
-                                 }: ContactoProps) {
+    params,
+}: ContactoProps) {
     const { id } = await params;
 
-    // Se reemplazará por la consulta real al backend.
-    const contacto: VendedorContacto | null = vendedor;
+    const resultado = /^\d+$/.test(id)
+        ? await obtenerContacto(id)
+        : {
+              contacto: null,
+              error: "El identificador de la publicación no es válido.",
+          };
+
+    const { contacto, error } = resultado;
+
+    const whatsapp = contacto
+        ? obtenerWhatsApp(contacto.telefono)
+        : null;
 
     return (
         <main
@@ -77,6 +153,7 @@ async function ContenidoContacto({
                     <Link href="/" style={{ color: "#334155" }}>
                         Inicio
                     </Link>
+
                     <Link
                         href="/publicaciones"
                         style={{ color: "#334155" }}
@@ -121,8 +198,8 @@ async function ContenidoContacto({
                         marginBottom: 30,
                     }}
                 >
-                    Consultá la información pública del vendedor
-                    para comunicarte directamente sobre el artículo.
+                    Consultá los datos de contacto autorizados
+                    para comunicarte directamente con el vendedor.
                 </p>
 
                 <div
@@ -155,15 +232,15 @@ async function ContenidoContacto({
                     {contacto ? (
                         <div style={{ display: "grid", gap: 18 }}>
                             <p>
-                                <strong>Vendedor:</strong>{" "}
-                                {contacto.nombre}
+                                <strong>Vendedor: </strong>
+                                {contacto.nombre_completo}
                             </p>
 
                             {contacto.telefono && (
                                 <p>
-                                    <strong>Teléfono:</strong>{" "}
+                                    <strong>Teléfono: </strong>
                                     <a
-                                        href={`tel:${contacto.telefono}`}
+                                        href={`tel:${contacto.telefono.replace(/[^+\d]/g, "")}`}
                                         style={{ color: "#2563eb" }}
                                     >
                                         {contacto.telefono}
@@ -173,7 +250,7 @@ async function ContenidoContacto({
 
                             {contacto.email && (
                                 <p>
-                                    <strong>Correo:</strong>{" "}
+                                    <strong>Correo electrónico: </strong>
                                     <a
                                         href={`mailto:${contacto.email}`}
                                         style={{ color: "#2563eb" }}
@@ -183,28 +260,44 @@ async function ContenidoContacto({
                                 </p>
                             )}
 
-                            {contacto.whatsapp && (
+                            {whatsapp && (
                                 <a
-                                    href={`https://wa.me/${contacto.whatsapp.replace(/\D/g, "")}`}
+                                    href={`https://wa.me/${whatsapp}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     style={{
                                         display: "inline-block",
                                         width: "fit-content",
-                                        padding: "12px 20px",
+                                        padding: "13px 20px",
                                         background: "#16803c",
                                         color: "#ffffff",
                                         borderRadius: 8,
                                         textDecoration: "none",
                                         fontWeight: "bold",
+                                        textAlign: "center",
                                     }}
                                 >
+                                    <i
+                                        className="pi pi-whatsapp"
+                                        style={{ marginRight: 8 }}
+                                    />
                                     Contactar por WhatsApp
                                 </a>
                             )}
+
+                            <p
+                                style={{
+                                    color: "#64748b",
+                                    fontSize: 14,
+                                }}
+                            >
+                                Utilizá estos datos únicamente para
+                                consultar sobre la publicación.
+                            </p>
                         </div>
                     ) : (
                         <div
+                            role="status"
                             style={{
                                 padding: 25,
                                 background: "#eff6ff",
@@ -232,9 +325,8 @@ async function ContenidoContacto({
                             </h3>
 
                             <p style={{ color: "#64748b" }}>
-                                Los datos públicos del vendedor se
-                                mostrarán cuando estén disponibles
-                                mediante la API de BazarYa.
+                                {error ||
+                                    "No hay datos de contacto disponibles."}
                             </p>
                         </div>
                     )}
@@ -260,8 +352,8 @@ async function ContenidoContacto({
 
                     <p style={{ color: "#475569" }}>
                         BazarYa facilita el contacto directo entre
-                        compradores y vendedores. La plataforma
-                        no procesa pagos ni administra envíos.
+                        compradores y vendedores. La plataforma no
+                        procesa pagos ni administra envíos.
                     </p>
                 </div>
             </section>
