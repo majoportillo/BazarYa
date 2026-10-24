@@ -1,0 +1,23 @@
+# Entornos y credenciales
+.env
+.venv/
+venv/
+env/
+
+# Caché de Python
+__pycache__/
+*.pyc
+
+# Node / Frontend
+node_modules/
+.next/
+dist/
+build/
+
+# Configuración de editores
+.vscode/
+.idea/
+
+# Archivos de la base de datos local
+database/data/
+*.pid
