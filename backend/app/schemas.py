@@ -223,3 +223,17 @@ class UsuarioLogin(BaseModel):
 class ProductoModeracionUpdate(BaseModel):
     estado: EstadoProducto
     motivo_rechazo: Optional[str] = None
+
+# ==========================================
+# ESQUEMA PARA CONTACTO DE VENDEDOR (BYA-93)
+# ==========================================
+
+class VendedorContactoResponse(BaseModel):
+    vendedor_id: UUID
+    nombre_completo: str
+    email: str
+    telefono: Optional[str] = None
+    nota: str = "Contacto directo entre comprador y vendedor (Sin pasarela de pagos ni envíos)."
+
+    class Config:
+        from_attributes = True

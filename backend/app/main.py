@@ -16,7 +16,6 @@ Base.metadata.create_all(bind=engine)
 # 3. DESPUÉS registras y agrupa todos los routers usando la variable 'app' ya creada
 app.include_router(auth.router)
 app.include_router(productos.router)
-app.include_router(usuarios.router)
 
 @app.get("/")
 def root():

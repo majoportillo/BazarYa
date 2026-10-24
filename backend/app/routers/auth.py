@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from fastapi import APIRouter, Depends, HTTPException, status, Header
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 
@@ -37,6 +37,23 @@ def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Usuario no autenticado o token inválido."
+# DEPENDENCIA: OBTENER USUARIO ACTUAL (Para productos y otros módulos)
+# ==========================================
+def get_current_user(email: str = Header(None), db: Session = Depends(get_db)) -> Usuario:
+    """
+    Identifica al usuario actual mediante el correo enviado por Header (o puedes ajustarlo a tu JWT).
+    """
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No se encontró credencial de autenticación (Header 'email' requerido para pruebas)."
+        )
+
+    usuario = db.query(Usuario).filter(Usuario.email == email).first()
+    if not usuario:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuario no encontrado."
         )
     return usuario
 
@@ -60,6 +77,7 @@ def get_current_admin_user(
 # ENDPOINTS DE AUTENTICACIÓN
 # ==========================================
 
+# 3. Endpoint de Registro
 @router.post("/register", response_model=UsuarioResponse, status_code=status.HTTP_201_CREATED)
 def registrar_usuario(usuario_data: UsuarioCreate, db: Session = Depends(get_db)):
     usuario_existente = db.query(Usuario).filter(Usuario.email == usuario_data.email).first()

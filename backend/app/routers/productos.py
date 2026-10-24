@@ -5,7 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel
 
 from app.database import get_db
-from app.schemas import ProductoCreate, ProductoResponse, ProductoUpdate, CategoriaResponse
+from app.schemas import ProductoCreate, ProductoResponse, ProductoUpdate, CategoriaResponse, VendedorContactoResponse
 from app import crud
 from app.models import Usuario, EstadoProducto
 from app.routers.auth import get_current_user, get_current_admin_user
@@ -61,6 +61,36 @@ def crear_nueva_publicacion(
 def listar_catalogo_publico(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
     """Muestra solo los productos listos para venta (Excluye PENDING)."""
     return crud.get_productos_publicos(db, skip=skip, limit=limit)
+
+
+# ---------------------------------------------------------
+# ENDPOINT: Contacto del Vendedor (BYA-93 / AC-01 al AC-05)
+# ---------------------------------------------------------
+@router.get(
+    "/{producto_id}/contacto",
+    response_model=VendedorContactoResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Obtener información de contacto del vendedor (BYA-93)"
+)
+def obtener_contacto_vendedor(producto_id: int, db: Session = Depends(get_db)):
+    """
+    BYA-93: Permite al comprador obtener la información de contacto directa
+    del vendedor para una publicación específica (AC-01 a AC-05).
+    """
+    vendedor, error = crud.get_contacto_vendedor_by_producto_id(db, producto_id)
+    if error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=error
+        )
+
+    return {
+        "vendedor_id": vendedor.id,
+        "nombre_completo": vendedor.nombre_completo,
+        "email": vendedor.email,
+        "telefono": vendedor.telefono,
+        "nota": "Contacto directo entre comprador y vendedor (Sin pasarela de pagos ni envíos)."
+    }
 
 
 # ---------------------------------------------------------
@@ -123,6 +153,7 @@ def cambiar_estado_vendido(
     return crud.marcar_producto_como_vendido(db=db, producto_id=producto_id, usuario_id=usuario_actual.id)
 
 
+
 # ---------------------------------------------------------
 # ENDPOINT: Búsqueda y Filtrado de Publicaciones (BYA-84)
 # ---------------------------------------------------------
@@ -141,6 +172,7 @@ def buscar_productos(
 ):
     """Permite a compradores explorar productos por término y categoría."""
     return crud.buscar_publicaciones(db=db, q=q, categoria_id=categoria_id, skip=skip, limit=limit)
+
 
 
 # ---------------------------------------------------------
