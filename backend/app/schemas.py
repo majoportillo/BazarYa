@@ -217,3 +217,9 @@ class UsuarioLogin(BaseModel):
         if isinstance(v, str):
             return v.strip().lower()
         return v
+# ==========================================
+# ESQUEMA PARA MODERACIÓN DE PRODUCTOS
+# ==========================================
+class ProductoModeracionUpdate(BaseModel):
+    estado: EstadoProducto
+    motivo_rechazo: Optional[str] = None
