@@ -44,7 +44,10 @@ export default function Publicaciones() {
                 return respuesta.json();
             })
             .then((datos: Categoria[]) => setCategorias(datos))
-            .catch((err) => console.error(err));
+            .catch((err) => {
+                console.error("Error al cargar categorías:", err);
+                setCategorias([]);
+            });
     }, []);
 
     useEffect(() => {
@@ -68,7 +71,9 @@ export default function Publicaciones() {
 
                 const respuesta = await fetch(
                     `${API}/api/productos/buscar?${parametros.toString()}`,
-                    { signal: controlador.signal }
+                    {
+                        signal: controlador.signal,
+                    }
                 );
 
                 if (!respuesta.ok) {
@@ -101,6 +106,13 @@ export default function Publicaciones() {
         };
     }, [busqueda, categoria]);
 
+    const estiloEnlace = {
+        color: "#334155",
+        textDecoration: "none",
+        fontSize: 15,
+        fontWeight: 500,
+    } as const;
+
     return (
         <main
             style={{
@@ -109,6 +121,7 @@ export default function Publicaciones() {
                 color: "#1e293b",
             }}
         >
+            {/* ENCABEZADO Y NAVEGACIÓN */}
             <header
                 style={{
                     background: "white",
@@ -133,19 +146,43 @@ export default function Publicaciones() {
                     BazarYa
                 </Link>
 
-                <nav style={{ display: "flex", gap: 20 }}>
-                    <Link href="/" style={{ color: "#334155" }}>
+                <nav
+                    aria-label="Navegación principal"
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                        gap: 20,
+                    }}
+                >
+                    <Link href="/" style={estiloEnlace}>
                         Inicio
                     </Link>
+
                     <Link
                         href="/publicaciones"
-                        style={{ color: "#2563eb" }}
+                        style={{
+                            ...estiloEnlace,
+                            color: "#2563eb",
+                            fontWeight: 700,
+                        }}
                     >
                         Publicaciones
+                    </Link>
+
+                    <Link href="/create-post">Vender producto</Link>
+
+                    <Link href="/mis-publicaciones" style={estiloEnlace}>
+                        Mis publicaciones
+                    </Link>
+
+                    <Link href="/profile" style={estiloEnlace}>
+                        Mi perfil
                     </Link>
                 </nav>
             </header>
 
+            {/* PRESENTACIÓN */}
             <section
                 style={{
                     background: "#eff6ff",
@@ -169,11 +206,13 @@ export default function Publicaciones() {
                 </p>
             </section>
 
+            {/* BÚSQUEDA, FILTROS Y CATÁLOGO */}
             <section style={{ padding: "35px 6%" }}>
                 <div
                     style={{
                         display: "flex",
                         flexWrap: "wrap",
+                        alignItems: "center",
                         gap: 15,
                         marginBottom: 35,
                     }}
@@ -189,6 +228,7 @@ export default function Publicaciones() {
                             background: "#fff",
                             color: "#1e293b",
                             border: "1px solid #cbd5e1",
+                            borderRadius: 6,
                         }}
                     />
 
@@ -228,6 +268,10 @@ export default function Publicaciones() {
                                 "/publicaciones"
                             );
                         }}
+                        style={{
+                            padding: "12px 16px",
+                            borderRadius: 6,
+                        }}
                     />
                 </div>
 
@@ -242,7 +286,12 @@ export default function Publicaciones() {
                 </h2>
 
                 {cargando ? (
-                    <div style={{ textAlign: "center", padding: 50 }}>
+                    <div
+                        style={{
+                            textAlign: "center",
+                            padding: 50,
+                        }}
+                    >
                         <i className="pi pi-spin pi-spinner" />
                         <p>Cargando publicaciones...</p>
                     </div>
@@ -277,13 +326,18 @@ export default function Publicaciones() {
                             }}
                         />
 
-                        <h3 style={{ fontSize: 20, marginBottom: 10 }}>
+                        <h3
+                            style={{
+                                fontSize: 20,
+                                marginBottom: 10,
+                            }}
+                        >
                             No hay publicaciones para mostrar
                         </h3>
 
                         <p style={{ color: "#64748b" }}>
-                            Todavía no hay productos que coincidan con
-                            tu búsqueda o categoría.
+                            Todavía no hay productos que coincidan con tu búsqueda
+                            o categoría.
                         </p>
                     </div>
                 ) : (
@@ -355,6 +409,7 @@ export default function Publicaciones() {
                                             marginTop: 15,
                                             color: "#2563eb",
                                             fontWeight: "bold",
+                                            textDecoration: "none",
                                         }}
                                     >
                                         Ver detalle
@@ -368,4 +423,3 @@ export default function Publicaciones() {
         </main>
     );
 }
-
