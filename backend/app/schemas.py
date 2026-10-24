@@ -1,3 +1,4 @@
+
 import html
 import re
 from datetime import datetime
@@ -5,16 +6,28 @@ from decimal import Decimal
 from typing import List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    EmailStr,
+    Field,
+    field_validator,
+    model_validator,
+)
+
 from .models import RolUsuario, EstadoProducto
 
-# Expresión regular para validar formato Data URL Base64 de imagen
+
+# ==========================================
+# VALIDACIÓN DE IMÁGENES
+# ==========================================
+
 BASE64_IMAGE_REGEX = re.compile(
     r"^data:image/(png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/=]+$"
 )
 
+
 # ==========================================
-# ESQUEMAS DE CATEGORÍAS
+# 1. ESQUEMAS DE CATEGORÍAS
 # ==========================================
 
 class CategoriaResponse(BaseModel):
@@ -26,26 +39,40 @@ class CategoriaResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
 # ==========================================
 # 2. ESQUEMAS DE USUARIOS
 # ==========================================
+
 class UsuarioCreate(BaseModel):
-    nombre_completo: str = Field(..., min_length=2, max_length=100)
+    nombre_completo: str = Field(
+        ..., min_length=2, max_length=100
+    )
     email: EmailStr
-    password: str = Field(..., min_length=8, max_length=100)
-    telefono: str = Field(..., min_length=8, max_length=20)
+    password: str = Field(
+        ..., min_length=8, max_length=100
+    )
+    telefono: str = Field(
+        ..., min_length=8, max_length=20
+    )
     fotografia_url: Optional[str] = None
 
-    @field_validator("nombre_completo", "telefono", mode="before")
+    @field_validator(
+        "nombre_completo",
+        "telefono",
+        mode="before"
+    )
     @classmethod
     def strip_and_validate_user_strings(cls, v: str) -> str:
         if isinstance(v, str):
             v_clean = v.strip()
             if not v_clean:
-                raise ValueError("El campo no puede estar vacío ni contener solo espacios")
+                raise ValueError(
+                    "El campo no puede estar vacío ni contener solo espacios"
+                )
             return v_clean
         return v
-        
+
     @field_validator("email", mode="before")
     @classmethod
     def email_to_lower(cls, v: str) -> str:
@@ -70,10 +97,14 @@ class UsuarioResponse(BaseModel):
 
 
 # ==========================================
-# 3. ESQUEMAS DE PRODUCTOS / PUBLICACIONES
+# 3. ESQUEMAS DE IMÁGENES
 # ==========================================
+
 class ImagenProductoCreate(BaseModel):
-    url_imagen: str = Field(..., description="URL o cadena Base64 de la imagen")
+    url_imagen: str = Field(
+        ...,
+        description="URL o cadena Base64 de la imagen"
+    )
     es_principal: bool = False
 
     @field_validator("url_imagen", mode="before")
@@ -81,17 +112,23 @@ class ImagenProductoCreate(BaseModel):
     def validar_y_sanear_imagen(cls, v: str) -> str:
         if isinstance(v, str):
             v_clean = v.strip()
+
             if not v_clean:
-                raise ValueError("La representación de la imagen no puede estar vacía.")
-            
-            # Si inicia con data:image, verificamos que cumpla el formato Base64 de imagen válido
+                raise ValueError(
+                    "La representación de la imagen no puede estar vacía."
+                )
+
             if v_clean.startswith("data:image"):
                 if not BASE64_IMAGE_REGEX.match(v_clean):
                     raise ValueError(
-                        "Formato Base64 inválido. Debe ser una cadena válida (ej. 'data:image/png;base64,...')."
+                        "Formato Base64 inválido. "
+                        "Debe ser una cadena válida de imagen."
                     )
+
             return v_clean
+
         return v
+
 
 class ImagenProductoResponse(BaseModel):
     id: int
@@ -102,64 +139,166 @@ class ImagenProductoResponse(BaseModel):
         from_attributes = True
 
 
-class ProductoCreate(BaseModel):
-    nombre: str = Field(..., min_length=3, max_length=150, description="Título del producto")
-    descripcion: str = Field(..., min_length=10, description="Descripción detallada")
-    precio: Decimal = Field(..., gt=0, decimal_places=2, description="Precio positivo mayor a cero")
-    stock: int = Field(1, ge=1, description="Cantidad inicial disponible")
-    categoria_id: int = Field(..., gt=0, description="ID de categoría válido")
-    imagenes: List[ImagenProductoCreate] = Field(..., min_items=1, max_items=5, description="Requiere al menos una imagen, máximo 5")
+# ==========================================
+# 4. CREAR PUBLICACIONES
+# ==========================================
 
-    @field_validator("nombre", "descripcion", mode="before")
+class ProductoCreate(BaseModel):
+    nombre: str = Field(
+        ...,
+        min_length=3,
+        max_length=150,
+        description="Título del producto"
+    )
+
+    descripcion: str = Field(
+        ...,
+        min_length=10,
+        description="Descripción detallada"
+    )
+
+    precio: Decimal = Field(
+        ...,
+        gt=0,
+        decimal_places=2,
+        description="Precio positivo mayor a cero"
+    )
+
+    stock: int = Field(1, ge=1)
+
+    categoria_id: int = Field(
+        ...,
+        gt=0,
+        description="ID de categoría válido"
+    )
+
+    imagenes: List[ImagenProductoCreate] = Field(
+        ...,
+        min_length=1,
+        max_length=5
+    )
+
+    @field_validator(
+        "nombre",
+        "descripcion",
+        mode="before"
+    )
     @classmethod
     def strip_and_validate_strings(cls, v: str) -> str:
         if isinstance(v, str):
             v_clean = v.strip()
+
             if not v_clean:
-                raise ValueError("El campo no puede estar vacío ni contener solo espacios")
+                raise ValueError(
+                    "El campo no puede estar vacío ni contener solo espacios"
+                )
+
             return html.escape(v_clean)
+
         return v
-    
-    # Regla de Negocio: Garantizar que exista exactamente una imagen principal
+
     @model_validator(mode="after")
     def validar_imagen_principal(self):
         if self.imagenes:
-            principales = [img for img in self.imagenes if img.es_principal]
+            principales = [
+                img for img in self.imagenes
+                if img.es_principal
+            ]
+
             if len(principales) == 0:
-                # Asigna la primera imagen como principal por defecto
                 self.imagenes[0].es_principal = True
+
             elif len(principales) > 1:
-                raise ValueError("Solo una imagen puede ser marcada como principal.")
+                raise ValueError(
+                    "Solo una imagen puede ser marcada como principal."
+                )
+
         return self
 
-# Esquema para Edición de Publicaciones (BYA-76: AC-02, AC-07)
-class ProductoUpdate(BaseModel):
-    nombre: Optional[str] = Field(None, min_length=3, max_length=150)
-    descripcion: Optional[str] = Field(None, min_length=10)
-    precio: Optional[Decimal] = Field(None, gt=0, decimal_places=2)
-    stock: Optional[int] = Field(None, ge=0)
-    categoria_id: Optional[int] = Field(None, gt=0)
-    imagenes: Optional[List[ImagenProductoCreate]] = Field(None, min_items=1, max_items=5)
 
-    @field_validator("nombre", "descripcion", mode="before")
+# ==========================================
+# 5. EDITAR PUBLICACIONES
+# ==========================================
+
+class ProductoUpdate(BaseModel):
+    nombre: Optional[str] = Field(
+        None,
+        min_length=3,
+        max_length=150
+    )
+
+    descripcion: Optional[str] = Field(
+        None,
+        min_length=10
+    )
+
+    precio: Optional[Decimal] = Field(
+        None,
+        gt=0,
+        decimal_places=2
+    )
+
+    stock: Optional[int] = Field(
+        None,
+        ge=0
+    )
+
+    categoria_id: Optional[int] = Field(
+        None,
+        gt=0
+    )
+
+    imagenes: Optional[List[ImagenProductoCreate]] = Field(
+        None,
+        min_length=1,
+        max_length=5
+    )
+
+    @field_validator(
+        "nombre",
+        "descripcion",
+        mode="before"
+    )
     @classmethod
-    def strip_and_validate_strings(cls, v: Optional[str]) -> Optional[str]:
+    def strip_and_validate_strings(
+        cls,
+        v: Optional[str]
+    ) -> Optional[str]:
+
         if isinstance(v, str):
             v_clean = v.strip()
+
             if not v_clean:
-                raise ValueError("El campo no puede estar vacío ni contener solo espacios")
+                raise ValueError(
+                    "El campo no puede estar vacío ni contener solo espacios"
+                )
+
             return html.escape(v_clean)
+
         return v
 
     @model_validator(mode="after")
     def validar_imagen_principal(self):
         if self.imagenes:
-            principales = [img for img in self.imagenes if img.es_principal]
+            principales = [
+                img for img in self.imagenes
+                if img.es_principal
+            ]
+
             if len(principales) == 0:
                 self.imagenes[0].es_principal = True
+
             elif len(principales) > 1:
-                raise ValueError("Solo una imagen puede ser marcada como principal.")
+                raise ValueError(
+                    "Solo una imagen puede ser marcada como principal."
+                )
+
         return self
+
+
+# ==========================================
+# 6. RESPUESTA DE PUBLICACIONES
+# ==========================================
 
 class ProductoResponse(BaseModel):
     id: int
@@ -171,31 +310,57 @@ class ProductoResponse(BaseModel):
     stock: int
     estado: EstadoProducto
     fecha_creacion: datetime
-    fecha_actualizacion: datetime
+
+    # CORRECCIÓN DEL ERROR 500
+    # Una publicación nueva puede no tener fecha
+    # de actualización todavía.
+    fecha_actualizacion: Optional[datetime] = None
+
     imagenes: List[ImagenProductoResponse]
 
     class Config:
         from_attributes = True
 
-# Esquema para elementos en resultados de búsqueda / catálogo (AC-08)
+
+# ==========================================
+# 7. RESULTADOS DE BÚSQUEDA Y CATÁLOGO
+# ==========================================
+
 class ProductoResumenResponse(BaseModel):
     id: int
     nombre: str
     descripcion: str
     precio: Decimal
     stock: int
-    estado: EstadoProducto  # Permite verificar si está ACTIVO o VENDIDO (AC-04)
+    estado: EstadoProducto
     categoria_id: int
     categoria: CategoriaResponse
     imagenes: List[ImagenProductoResponse]
+
+
 # ==========================================
-# NUEVOS ESQUEMAS PARA PERFILES (BYA-57 y BYA-58)
+# 8. ACTUALIZAR PERFIL
 # ==========================================
 
 class UsuarioUpdate(BaseModel):
-    nombre_completo: Optional[str] = Field(None, min_length=2, max_length=100)
-    telefono: Optional[str] = Field(None, min_length=8, max_length=20)
+    nombre_completo: Optional[str] = Field(
+        None,
+        min_length=2,
+        max_length=100
+    )
+
+    telefono: Optional[str] = Field(
+        None,
+        min_length=8,
+        max_length=20
+    )
+
     fotografia_url: Optional[str] = None
+
+
+# ==========================================
+# 9. PERFIL PÚBLICO
+# ==========================================
 
 class UsuarioPublicResponse(BaseModel):
     id: UUID
@@ -207,25 +372,43 @@ class UsuarioPublicResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
+# ==========================================
+# 10. INICIO DE SESIÓN
+# ==========================================
+
 class UsuarioLogin(BaseModel):
-    email: EmailStr = Field(..., description="Correo electrónico registrado")
-    password: str = Field(..., min_length=1, description="Contraseña del usuario")
+    email: EmailStr = Field(
+        ...,
+        description="Correo electrónico registrado"
+    )
+
+    password: str = Field(
+        ...,
+        min_length=1,
+        description="Contraseña del usuario"
+    )
 
     @field_validator("email", mode="before")
     @classmethod
     def email_to_lower(cls, v: str) -> str:
         if isinstance(v, str):
             return v.strip().lower()
+
         return v
+
+
 # ==========================================
-# ESQUEMA PARA MODERACIÓN DE PRODUCTOS
+# 11. MODERACIÓN DE PRODUCTOS
 # ==========================================
+
 class ProductoModeracionUpdate(BaseModel):
     estado: EstadoProducto
     motivo_rechazo: Optional[str] = None
 
+
 # ==========================================
-# ESQUEMA PARA CONTACTO DE VENDEDOR (BYA-93)
+# 12. CONTACTO DEL VENDEDOR
 # ==========================================
 
 class VendedorContactoResponse(BaseModel):
@@ -233,7 +416,11 @@ class VendedorContactoResponse(BaseModel):
     nombre_completo: str
     email: str
     telefono: Optional[str] = None
-    nota: str = "Contacto directo entre comprador y vendedor (Sin pasarela de pagos ni envíos)."
+
+    nota: str = (
+        "Contacto directo entre comprador y vendedor "
+        "(Sin pasarela de pagos ni envíos)."
+    )
 
     class Config:
         from_attributes = True
