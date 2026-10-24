@@ -1,8 +1,8 @@
 "use client";
 
-import MenuBazarYa from "../../components/MenuBazarYa";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { SectionLoading } from "@/components/LoadingBazarYa";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 type Imagen = { id: number; url_imagen: string; es_principal: boolean };
@@ -50,7 +50,7 @@ export default function Administracion() {
   return <main style={{minHeight:"100vh",background:"#f8fafc",color:"#1e293b"}}>
     <header style={{background:"white",borderBottom:"1px solid #e2e8f0",padding:"20px 6%",display:"flex",justifyContent:"space-between",gap:20,flexWrap:"wrap",alignItems:"center"}}>
       <Link href="/" style={{fontSize:28,fontWeight:800,color:"#2563eb",textDecoration:"none"}}>BazarYa</Link>
-      <MenuBazarYa />
+      <nav style={{display:"flex",gap:18,flexWrap:"wrap"}}><Link href="/">Inicio</Link><Link href="/publicaciones">Catálogo</Link><Link href="/create-post">Vender producto</Link><Link href="/mis-publicaciones">Mis publicaciones</Link><Link href="/profile">Mi perfil</Link></nav>
     </header>
     <section style={{maxWidth:1100,margin:"auto",padding:"45px 6%"}}>
       <h1 style={{fontSize:33,fontWeight:800,color:"#1e3a8a"}}>Moderación de publicaciones</h1>
@@ -58,7 +58,7 @@ export default function Administracion() {
       {sinSesion&&<div style={{...card,background:"#fff7ed"}}>Necesitás iniciar sesión. <Link href="/login">Ingresar</Link></div>}
       {error&&<div role="alert" style={{...card,background:"#fef2f2",color:"#991b1b",marginBottom:16}}>{error}</div>}
       {aviso&&<div role="status" style={{...card,background:"#f0fdf4",color:"#166534",marginBottom:16}}>{aviso}</div>}
-      {cargando?<p>Cargando publicaciones pendientes...</p>:!error&&!sinSesion&&productos.length===0?<div style={card}>No hay publicaciones pendientes de moderación.</div>:<div style={{display:"grid",gap:18}}>
+      {cargando?<SectionLoading title="Cargando publicaciones pendientes" subtitle="Estamos consultando los artículos que necesitan aprobación administrativa." variant="cards" />:!error&&!sinSesion&&productos.length===0?<div style={card}>No hay publicaciones pendientes de moderación.</div>:<div style={{display:"grid",gap:18}}>
         {productos.map(p=><article key={p.id} style={card}>
           <div style={{display:"flex",gap:18,flexWrap:"wrap"}}>
             {p.imagenes?.[0]&&<img src={p.imagenes[0].url_imagen} alt={`Imagen de ${p.nombre}`} style={{width:145,height:130,objectFit:"contain",borderRadius:8}}/>}

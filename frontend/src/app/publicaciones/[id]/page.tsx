@@ -1,7 +1,7 @@
-import MenuBazarYa from "../../../components/MenuBazarYa";
 
 import { Suspense } from "react";
 import Link from "next/link";
+import { PageLoading } from "@/components/LoadingBazarYa";
 
 type DetalleProps = {
     params: Promise<{ id: string }>;
@@ -57,16 +57,12 @@ export default function DetalleProducto({ params }: DetalleProps) {
     return (
         <Suspense
             fallback={
-                <main
-                    style={{
-                        minHeight: "100vh",
-                        background: "#f8fafc",
-                        color: "#1e293b",
-                        padding: 40,
-                    }}
-                >
-                    Cargando información del producto...
-                </main>
+                <PageLoading
+                    layout="page"
+                    title="Cargando información del producto"
+                    subtitle="Estamos preparando las fotos, el precio y los datos del artículo."
+                    variant="detail"
+                />
             }
         >
             <ContenidoDetalle params={params} />
@@ -121,7 +117,17 @@ async function ContenidoDetalle({ params }: DetalleProps) {
                     BazarYa
                 </Link>
 
-                <MenuBazarYa />
+                <nav style={{ display: "flex", gap: 20 }}>
+                    <Link href="/" style={{ color: "#334155" }}>
+                        Inicio
+                    </Link>
+                    <Link
+                        href="/publicaciones"
+                        style={{ color: "#2563eb" }}
+                    >
+                        Publicaciones
+                    </Link>
+                </nav>
             </header>
 
             <section style={{ padding: "35px 6%" }}>

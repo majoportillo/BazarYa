@@ -1,8 +1,8 @@
 "use client";
 
-import MenuBazarYa from "../../components/MenuBazarYa";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { SectionLoading } from "@/components/LoadingBazarYa";
 
 const API = "http://127.0.0.1:8000";
 
@@ -145,14 +145,14 @@ export default function MisPublicaciones() {
     <main style={{minHeight: "100vh", background: "#f8fafc", color: "#1e293b"}}>
       <header style={{background: "white", borderBottom: "1px solid #e2e8f0", padding: "20px 6%", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 16}}>
         <Link href="/" style={{fontSize: 28, fontWeight: 700, color: "#2563eb", textDecoration: "none"}}>BazarYa</Link>
-        <MenuBazarYa />
+        <nav style={{display: "flex", gap: 20}}><Link href="/">Inicio</Link><Link href="/publicaciones">Catálogo</Link><Link href="/create-post">Vender producto</Link><Link href="/profile">Mi perfil</Link></nav>
       </header>
       <section style={{padding: "40px 6%", maxWidth: 1100, margin: "auto"}}>
         <h1 style={{fontSize: 32, fontWeight: 700, color: "#1e3a8a"}}>Mis publicaciones</h1>
         <p style={{color: "#64748b", margin: "12px 0 28px"}}>Consultá y editá los artículos que publicaste.</p>
         {error && <div role="alert" style={{...caja, background: "#fef2f2", color: "#991b1b", marginBottom: 20}}>{error} {error.toLowerCase().includes("sesión") && <Link href="/login">Iniciar sesión</Link>}</div>}
         {aviso && <p role="status" style={{color: "#166534", marginBottom: 20}}>{aviso}</p>}
-        {cargando ? <p>Cargando publicaciones...</p> : productos.length === 0 ?
+        {cargando ? <SectionLoading title="Cargando tus publicaciones" subtitle="Estamos consultando los artículos que publicaste en BazarYa." variant="cards" /> : productos.length === 0 ?
           <div style={caja}>No hay publicaciones propias para mostrar. <Link href="/publicaciones">Ver catálogo</Link></div> :
           <div style={{display: "grid", gap: 20}}>
             {productos.map(p => <article key={p.id} style={caja}>
