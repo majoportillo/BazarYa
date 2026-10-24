@@ -1,0 +1,44 @@
+## Módulo Backend (API REST)
+
+El backend de **BazarYa** está desarrollado en Python utilizando **FastAPI** y **SQLAlchemy**, conectado a una base de datos **PostgreSQL** containerizada.
+
+---
+
+### Módulos Implementados
+
+#### 1. Módulo de Usuarios y Autenticación (`/backend/app/models.py`, `schemas.py`)
+- **Gestión de Cuentas:** Registro y administración de perfiles bajo un rol híbrido (`COMPRADOR_VENDEDOR`) o `ADMINISTRADOR`[cite: 1].
+- **Validaciones Integradas:**
+  - Sanitización de correos electrónicos (conversión automática a minúsculas, cumplimiento AC-02 de registro).
+  - Encriptación de contraseñas y validación de longitud mínima de campos (AC-06).
+  - Formato seguro de respuesta que oculta el hash de las contraseñas.
+
+#### 2. Módulo de Productos y Publicaciones (`/backend/app/models.py`, `schemas.py`)
+- **Gestión de Artículos:** Creación de publicaciones de productos asociadas directamente al usuario creador (AC-09).
+- **Flujo de Moderación:** Todo nuevo artículo se registra por defecto con el estado `PENDING` (AC-07) para prevenir su aparición en el catálogo público hasta ser revisado (AC-08).
+- **Imágenes Integradas:** Soporte de imágenes múltiples por producto (enlace URL o cadena Base64 segun BYA-71) mediante la tabla relacional `imagenes_producto` (AC-06).
+- **Validaciones de Negocio:** Rechazo automático (HTTP 422) ante precios negativos ($\le 0$), textos vacíos o datos faltantes (AC-02, AC-03, AC-04, AC-05, AC-10).
+
+---
+
+### Ejecución y Prueba Local
+
+1. **Levantar la Base de Datos con Docker:**
+   Asegúrate de contar con el archivo `.env` en la raíz del proyecto con las credenciales correspondientes:
+   ```bash
+   docker compose --env-file .env -f database/bazarya-cp.yml up -d
+```
+
+2. **Instalar Dependencias de Python:**
+   ```bash
+   cd backend
+   pip install -r requirements.txt
+   ``` 
+
+3. **Iniciar Servidor de Desarrollo**
+    ```bash
+   $env:PYTHONPATH="."; py -m uvicorn app.main:app --reload
+    ```
+
+4. **Documentacion Interactiva (Swagger /OpenAPI)**
+    Accede desde el navegador a: http://localhost:8000/docs (Cumplimiento AC-11).
