@@ -7,10 +7,10 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(dotenv_path=BASE_DIR / ".env")
 
-# Forzamos un valor por defecto si la variable de entorno no existe o está vacía
-DATABASE_URL = os.getenv("DATABASE_URL") or "postgresql+psycopg2://miuser:mipass@localhost:54322/bazarya"
-
-if DATABASE_URL.startswith("postgresql://"):
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    DATABASE_URL = "postgresql+psycopg2://miuser:mipass@localhost:54322/bazarya"
+elif DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://")
 
 print(f"--> Conectando a: {DATABASE_URL}")

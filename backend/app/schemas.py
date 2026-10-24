@@ -166,3 +166,14 @@ class UsuarioPublicResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class UsuarioLogin(BaseModel):
+    email: EmailStr = Field(..., description="Correo electrónico registrado")
+    password: str = Field(..., min_length=1, description="Contraseña del usuario")
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def email_to_lower(cls, v: str) -> str:
+        if isinstance(v, str):
+            return v.strip().lower()
+        return v
