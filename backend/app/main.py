@@ -1,17 +1,21 @@
 from fastapi import FastAPI
-from app.routers import productos, usuarios
-from app.routers.auth import router as auth_router
 from app.database import engine, Base
-from app.models import Usuario, Producto, Categoria, ImagenProducto  # <--- IMPORTANTE: Importar los modelos aquí
-from app.routers import auth
+from app.models import Usuario, Producto, Categoria, ImagenProducto  # Importante para que SQLAlchemy cree las tablas
+from app.routers import productos, usuarios, auth
 
-# Esto lee los modelos importados y crea las tablas en PostgreSQL si no existen
+# instancia de la aplicación FastAPI
+app = FastAPI(
+    title="BazarYa API",
+    version="1.0.0",
+    description="API oficial para el sistema de moderación y gestión de BazarYa"
+)
+
+# 2. Crea las tablas en PostgreSQL si no existen
 Base.metadata.create_all(bind=engine)
 
-
-app.include_router(auth_router)
+# 3. DESPUÉS registras y agrupa todos los routers usando la variable 'app' ya creada
+app.include_router(auth.router)
 app.include_router(productos.router)
-app.include_router(usuarios.router)
 
 @app.get("/")
 def root():

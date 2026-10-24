@@ -10,7 +10,7 @@ import { Card } from 'primereact/card';
 
 export default function CreatePostPage() {
     const router = useRouter();
-    // Categorías de ejemplo (en una aplicación real vendrían de la BD)
+    // Categorías de ejemplo
     const categorias = [
         { label: 'Electrónica', value: 'electronica' },
         { label: 'Ropa', value: 'ropa' },
@@ -44,11 +44,36 @@ export default function CreatePostPage() {
          setPostData(prev => ({ ...prev, categoria: e.value }));
     }
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         
-        console.log('Datos de la nueva publicación listos para enviar:', postData);
-        alert('Formulario completado (Simulación de creación)');
+        try {
+            
+            const token = localStorage.getItem('token');
+            
+            
+            const response = await fetch('http://localhost:8000/api/publicaciones', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` // Enviamos el pase de seguridad
+                },
+                body: JSON.stringify(postData)
+            });
+
+            if (response.ok) {
+                alert('¡Publicación creada con éxito!');
+                // Limpiamos el formulario
+                setPostData({ titulo: '', descripcion: '', precio: null, categoria: null, imagenUrl: '' });
+                
+            } else {
+                const errorData = await response.json();
+                alert(`Error al crear: ${errorData.message || 'Revisa los datos ingresados'}`);
+            }
+        } catch (error) {
+            console.error('Error de red:', error);
+            alert('Error de conexión. Asegúrate de que el backend esté encendido.');
+        }
     };
 
     return (
