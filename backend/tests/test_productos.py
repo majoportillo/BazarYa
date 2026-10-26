@@ -1,6 +1,35 @@
 # Pruebas para la creación de publicaciones y administracion de publicaciones
 import unittest
 from decimal import Decimal
+import uuid
+from app.models import Usuario  # Ajusta la ruta a tu modelo de Usuario si difiere
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from app.database import Base
+
+from datetime import datetime
+
+# Importar modelos de SQLAlchemy
+from app.models import Producto, Usuario, RolUsuario, EstadoProducto, Categoria
+
+# Importar esquemas Pydantic (SDD)
+from app.schemas import ProductoCreate, ProductoUpdate, ProductoResponse
+# Importar funciones CRUD
+from app.crud import (
+    obtener_productos_por_usuario,
+    get_producto_by_id,
+    marcar_producto_como_vendido,
+    buscar_publicaciones,
+    obtener_publicaciones_por_categoria,
+    obtener_publicaciones_pendientes,
+    actualizar_publicacion,         # <--- Agregar esta
+    eliminar_publicacion,           # <--- Agregar esta
+    get_productos_publicos # <--- Agregar este alias
+)
+
+# Importar dependencias de autenticación y seguridad
+from app.routers.auth import get_current_admin_user, get_current_user
+from fastapi import HTTPException, status
 
 try:
     from pydantic import ValidationError
@@ -31,8 +60,19 @@ def datos_producto_validos(**cambios):
 class TestEsquemaProducto(unittest.TestCase):
 
     def setUp(self):
-        if error_schemas:
-            self.fail("No se pudieron importar los schemas de Producto: " + repr(error_schemas))
+        # Crear base de datos SQLite en memoria para los tests
+        self.engine = create_engine("sqlite:///:memory:")
+        TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
+        Base.metadata.create_all(bind=self.engine)
+        self.db = TestingSessionLocal()
+
+        cat_inicial = Categoria(id=1, nombre="Electrónica", descripcion="Categoría de prueba", activo=True)
+        self.db.add(cat_inicial)
+        self.db.commit()
+
+    def tearDown(self):
+        self.db.close()
+        Base.metadata.drop_all(bind=self.engine)
     # BYA-76: AC-01 - Consultar publicaciones propias
     def test_ac01_consultar_mis_publicaciones_vacio(self):
         # Verifica que la función del CRUD filtre correctamente por el ID del usuario

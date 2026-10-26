@@ -1,18 +1,41 @@
-from fastapi import FastAPI
-from app.routers import productos, usuarios
-from app.routers.auth import router as auth_router
-from app.database import engine, Base
-from app.models import Usuario, Producto, Categoria, ImagenProducto  # <--- IMPORTANTE: Importar los modelos aquí
-from app.routers import auth
 
-# Esto lee los modelos importados y crea las tablas en PostgreSQL si no existen
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.database import engine, Base
+from app.models import Usuario, Producto, Categoria, ImagenProducto
+from app.routers import productos, usuarios, auth
+
+# Inicializar la aplicación
+app = FastAPI(
+    title="BazarYa API",
+    version="1.0.0",
+    description="API oficial para el sistema de moderación y gestión de BazarYa"
+)
+
+# Permitir la conexión del frontend Next.js
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Crear tablas si todavía no existen
 Base.metadata.create_all(bind=engine)
 
-
-app.include_router(auth_router)
+# Registrar las rutas del sistema
+app.include_router(auth.router)
 app.include_router(productos.router)
 app.include_router(usuarios.router)
 
+
 @app.get("/")
 def root():
-    return {"message": "Bienvenido a la API de BazarYa"}
+    return {
+        "message": "Bienvenido a la API de BazarYa"
+    }
