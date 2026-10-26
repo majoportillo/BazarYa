@@ -1,4 +1,5 @@
-'use client';
+"use client";
+
 import { useState, type FormEvent, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -21,7 +22,7 @@ export default function LoginPage() {
       localStorage.setItem('token',token);
       if(data?.usuario && typeof data.usuario==='object') localStorage.setItem('usuario',JSON.stringify(data.usuario));
       else localStorage.removeItem('usuario');
-      router.push('/mis-publicaciones'); router.refresh();
+      window.dispatchEvent(new Event('bazarya-auth-change')); router.push('/mis-publicaciones'); router.refresh();
     } catch(err){setError(err instanceof Error?err.message:'No fue posible conectar con el servidor.');} finally{setBusy(false);}
   }
   return <main style={{minHeight:'100vh',background:'#f3f6fb',color:'#172b4d'}}>

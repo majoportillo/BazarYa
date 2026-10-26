@@ -343,20 +343,22 @@ class ProductoResumenResponse(BaseModel):
 # ==========================================
 
 class UsuarioUpdate(BaseModel):
-    nombre_completo: Optional[str] = Field(
-        None,
-        min_length=2,
-        max_length=100
-    )
-
-    telefono: Optional[str] = Field(
-        None,
-        min_length=8,
-        max_length=20
-    )
-
+    nombre_completo: Optional[str] = Field(None, min_length=1, max_length=100)
+    telefono: Optional[str] = Field(None, min_length=8, max_length=20)
     fotografia_url: Optional[str] = None
 
+    @field_validator("nombre_completo", "telefono", mode="before")
+    @classmethod
+    def validar_no_espacios_vacios(cls, v: Optional[str]) -> Optional[str]:
+        # Si el valor es una cadena de texto, eliminamos los espacios al inicio y al final (.strip())
+        if isinstance(v, str):
+            v_limpio = v.strip()
+            # Si al quitar espacios queda una cadena vacía, retornamos None o string vacío
+            # para que el min_length=1 de Pydantic lo rechace automáticamente con un error 422
+            if not v_limpio:
+                return ""
+            return v_limpio
+        return v
 
 # ==========================================
 # 9. PERFIL PÚBLICO

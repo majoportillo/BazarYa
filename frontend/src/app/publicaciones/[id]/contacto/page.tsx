@@ -1,6 +1,7 @@
 
 import Link from "next/link";
 import { Suspense } from "react";
+import { PageLoading } from "@/components/LoadingBazarYa";
 
 type ContactoProps = {
     params: Promise<{ id: string }>;
@@ -82,16 +83,12 @@ export default function PaginaContacto({
     return (
         <Suspense
             fallback={
-                <main
-                    style={{
-                        minHeight: "100vh",
-                        background: "#f8fafc",
-                        padding: 40,
-                        color: "#1e293b",
-                    }}
-                >
-                    Cargando información de contacto...
-                </main>
+                <PageLoading
+                    layout="page"
+                    title="Cargando información de contacto"
+                    subtitle="Estamos preparando los datos públicos del vendedor para que puedas comunicarte."
+                    variant="contact"
+                />
             }
         >
             <ContenidoContacto params={params} />
